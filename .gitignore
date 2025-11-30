@@ -6,8 +6,13 @@
 # init data
 /src/database/seeds
 
+# Docker Data
+/mysql_data
+/redis_data
+
 # test data db
 *.sqlite
+db.sqlite
 
 # Logs
 logs
@@ -43,6 +48,7 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .env
+.env.docker
 .env.development.local
 .env.test.local
 .env.production.local

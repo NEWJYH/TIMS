@@ -50,6 +50,6 @@ async function bootstrap() {
   // 6. 전역 예외 필터
   app.useGlobalFilters(new CustomHttpExceptionFilter());
 
-  await app.listen(process.env.PORT ?? 4000);
+  await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
