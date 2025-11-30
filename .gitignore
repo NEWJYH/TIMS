@@ -6,6 +6,9 @@
 # init data
 /src/database/seeds
 
+# test data db
+*.sqlite
+
 # Logs
 logs
 *.log
