@@ -1,0 +1,263 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Store {
+  id: Int!
+  name: String!
+  address: String!
+  telePhoneNumber: String!
+  code: String!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  deletedAt: DateTime
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type TireBrand {
+  id: Int!
+  name: String!
+}
+
+type TireCategory {
+  id: Int!
+  name: String!
+}
+
+type Tire {
+  id: Int!
+  name: String!
+  brandId: Int!
+  brand: TireBrand!
+  categoryId: Int!
+  category: TireCategory!
+  width: Int!
+  aspectRatio: Int
+  diameter: Int!
+  plyRating: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  deletedAt: DateTime
+}
+
+type Inventory {
+  id: Int!
+  storeId: Int!
+  store: Store!
+  tireId: Int!
+  tire: Tire!
+  quantity: Int!
+  locationCode: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type InventoryHistoryType {
+  id: Int!
+  name: String!
+}
+
+type Role {
+  id: Int!
+  name: String!
+}
+
+type User {
+  id: String!
+  email: String!
+  name: String!
+  phoneNumber: String!
+  roleId: Int!
+  role: Role!
+  storeId: Int
+  store: Store
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  deletedAt: DateTime
+}
+
+type RoleRequest {
+  id: Int!
+  userId: String!
+  user: User!
+  roleId: Int!
+  role: Role!
+  status: RoleRequestStatus!
+  processedById: String
+  processedBy: User
+  createdAt: DateTime!
+  processedAt: DateTime!
+}
+
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+type Query {
+  fetchUsers: [User!]!
+  fetchUserByEmail(email: String!): User
+  fetchUsersByStore(storeId: Int!): [User!]!
+  fetchUser: User!
+  fetchRoles: [Role!]!
+  fetchRole(name: String!): Role
+  fetchStores: [Store!]!
+  fetchStore(storeId: Int!): Store
+  fetchTires: [Tire!]!
+  fetchTire(id: Int!): Tire
+  fetchTireBrands: [TireBrand!]!
+  fetchTireBrand(tireBrandId: Float!): TireBrand!
+  fetchTireCategory(tireCategoryId: Int!): TireCategory!
+  fetchTireCategories: [TireCategory!]!
+  fetchInventories(storeId: Int!): [Inventory!]!
+  fetchInventory(storeId: Int!, tireId: Int!): Inventory
+  fetchRoleRequests: [RoleRequest!]!
+}
+
+type Mutation {
+  deleteUser(userId: String!): Boolean!
+  updateUser(updateUserInput: UpdateUserInput!): User!
+  deleteAccount(deleteUserInput: DeletUserInput!): Boolean!
+  createUser(createUserInput: CreateUserInput!): User!
+  createRole(createRoleInput: CreateRoleInput!): Role!
+  updateRole(updateRoleInput: UpdateRoleInput!): Role!
+  createStore(createStoreInput: CreateStoreInput!): Store!
+  updateStore(updateStoreInput: UpdateStoreInput!): Store!
+  deleteStore(storeId: Int!): Boolean!
+  createTire(createTireInput: CreateTireInput!): Tire!
+  updateTire(updateTireInput: UpdateTireInput!): Tire!
+  deleteTire(id: Int!): Boolean!
+  createTireBrand(createTireBrandInput: CreateTireBrandInput!): TireBrand!
+  updateTireBrand(updateTireBrandInput: UpdateTireBrandInput!): TireBrand!
+  createTireCategory(createTireCategoryInput: CreateTireCategoryInput!): TireCategory!
+  updateTireCategory(updateTireCategoryInput: UpdateTireCategoryInput!): TireCategory!
+  stockIn(stockInInput: StockInInput!): Inventory!
+  stockOut(stockOutInput: StockOutInput!): Inventory!
+  stockAdjust(stockAdjustInput: StockAdjustInput!): Inventory!
+  requestRoleChange(createRoleRequestInput: CreateRoleRequestInput!): RoleRequest!
+  processRoleRequest(processRoleRequestInput: ProcessRoleRequestInput!): RoleRequest!
+  login(email: String!, password: String!): String!
+  restoreAcessToken: String!
+  logout: String!
+}
+
+input UpdateUserInput {
+  password: String
+  name: String
+  phoneNumber: String
+  currentPassword: String!
+}
+
+input DeletUserInput {
+  currentPassword: String!
+}
+
+input CreateUserInput {
+  email: String!
+  password: String!
+  name: String!
+  phoneNumber: String!
+}
+
+input CreateRoleInput {
+  name: String!
+}
+
+input UpdateRoleInput {
+  name: String
+  id: Int!
+}
+
+input CreateStoreInput {
+  name: String!
+  address: String!
+  telePhoneNumber: String
+  code: String!
+}
+
+input UpdateStoreInput {
+  name: String
+  address: String
+  telePhoneNumber: String
+  code: String
+  id: Int!
+}
+
+input CreateTireInput {
+  brandId: Int!
+  name: String!
+  categoryId: Int!
+  width: Int!
+  aspectRatio: Int
+  diameter: Int!
+  plyRating: String
+}
+
+input UpdateTireInput {
+  brandId: Int
+  name: String
+  categoryId: Int
+  width: Int
+  aspectRatio: Int
+  diameter: Int
+  plyRating: String
+  id: Int!
+}
+
+input CreateTireBrandInput {
+  name: String!
+}
+
+input UpdateTireBrandInput {
+  name: String
+  id: Int!
+}
+
+input CreateTireCategoryInput {
+  name: String!
+}
+
+input UpdateTireCategoryInput {
+  name: String
+  id: Int!
+}
+
+input StockInInput {
+  storeId: Int!
+  tireId: Int!
+  quantity: Int!
+  userId: String!
+  memo: String
+}
+
+input StockOutInput {
+  storeId: Int!
+  tireId: Int!
+  quantity: Int!
+  userId: String!
+  memo: String
+}
+
+input StockAdjustInput {
+  storeId: Int!
+  tireId: Int!
+  quantity: Int!
+  userId: String!
+  memo: String
+}
+
+input CreateRoleRequestInput {
+  roleName: String!
+}
+
+input ProcessRoleRequestInput {
+  requestId: Int!
+  status: RoleRequestStatus!
+  storeId: Int
+}
