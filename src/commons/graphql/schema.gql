@@ -123,7 +123,6 @@ type Query {
 type Mutation {
   deleteUser(userId: String!): Boolean!
   updateUser(updateUserInput: UpdateUserInput!): User!
-  deleteAccount(deleteUserInput: DeletUserInput!): Boolean!
   createUser(createUserInput: CreateUserInput!): User!
   createRole(createRoleInput: CreateRoleInput!): Role!
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
@@ -151,10 +150,6 @@ input UpdateUserInput {
   password: String
   name: String
   phoneNumber: String
-  currentPassword: String!
-}
-
-input DeletUserInput {
   currentPassword: String!
 }
 

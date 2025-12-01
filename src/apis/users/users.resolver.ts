@@ -9,7 +9,7 @@ import { Roles } from 'src/commons/decorators/roles.decorator';
 import { RoleName } from 'src/commons/enums/role.enum';
 import { RolesGuard } from 'src/commons/guards/roles.guard';
 import { CurrentUser } from 'src/commons/decorators/current-user.decorator';
-import { DeletUserInput } from './dto/delete-user.input';
+// import { DeletUserInput } from './dto/delete-user.input';
 @Resolver()
 export class UsersResolver {
   constructor(
@@ -74,17 +74,17 @@ export class UsersResolver {
   }
 
   // 유저
-  @UseGuards(GqlAuthGuard('access'))
-  @Mutation(() => Boolean)
-  deleteAccount(
-    @CurrentUser() currentUser: User,
-    @Args('deleteUserInput') deleteUserInput: DeletUserInput,
-  ): Promise<boolean> {
-    return this.usersService.deleteAccount({
-      userId: currentUser.id,
-      currentPassword: deleteUserInput.currentPassword,
-    });
-  }
+  // @UseGuards(GqlAuthGuard('access'))
+  // @Mutation(() => Boolean)
+  // deleteAccount(
+  //   @CurrentUser() currentUser: User,
+  //   @Args('deleteUserInput') deleteUserInput: DeletUserInput,
+  // ): Promise<boolean> {
+  //   return this.usersService.deleteAccount({
+  //     userId: currentUser.id,
+  //     currentPassword: deleteUserInput.currentPassword,
+  //   });
+  // }
 
   // 누구나
   @Mutation(() => User)

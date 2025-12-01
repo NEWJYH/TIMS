@@ -18,3 +18,7 @@ export interface IUserServiceDeleteAccount {
   userId: string;
   currentPassword: string;
 }
+
+export interface IUserServiceCreateOAuth {
+  email: string;
+}

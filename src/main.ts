@@ -1,8 +1,8 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { CustomHttpExceptionFilter } from './commons/filters/custom-exception.filter';
 import { winstonLogger } from './utils/winston.config';
-import { ValidationPipe } from '@nestjs/common';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import * as morgan from 'morgan';
 import { LoggingInterceptor } from './commons/interceptors/logging.interceptor';
 
@@ -31,6 +31,8 @@ async function bootstrap() {
     }),
   );
   app.useGlobalInterceptors(new LoggingInterceptor());
+
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // CORS 설정 (쿠키 인증을 위해 credentials 필수)
   app.enableCors({

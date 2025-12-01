@@ -11,7 +11,8 @@ import { RolesService } from '../roles/roles.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   IUserServiceCreate,
-  IUserServiceDeleteAccount,
+  IUserServiceCreateOAuth,
+  // IUserServiceDeleteAccount,
   IUserServiceFindByEmail,
   IUserServiceUpdate,
 } from './interfaces/users-service.interface';
@@ -111,6 +112,12 @@ export class UsersService {
       throw new NotFoundException('유저를 찾을 수 없습니다.');
     }
 
+    if (!user.password) {
+      throw new ConflictException(
+        '소셜 로그인 유저는 비밀번호 검증을 할 수 없습니다. (소셜 연동 해제 필요)',
+      );
+    }
+
     // 비밀번호 변경 요청 시 -> 암호화 다시 해서 저장
     const isPasswordValid = await bcrypt.compare(
       currentPassword,
@@ -161,26 +168,39 @@ export class UsersService {
     return result.affected ? true : false;
   }
 
-  async deleteAccount({
-    userId,
-    currentPassword,
-  }: IUserServiceDeleteAccount): Promise<boolean> {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('유저를 찾을 수 없습니다.');
-    }
+  // async deleteAccount({
+  //   userId,
+  //   currentPassword,
+  // }: IUserServiceDeleteAccount): Promise<boolean> {
+  //   const user = await this.usersRepository.findOne({ where: { id: userId } });
+  //   if (!user) {
+  //     throw new NotFoundException('유저를 찾을 수 없습니다.');
+  //   }
 
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password,
-    );
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(
-        '비밀번호가 일치하지 않아 탈퇴할 수 없습니다.',
-      );
-    }
+  //   const isPasswordValid = await bcrypt.compare(
+  //     currentPassword,
+  //     user.password,
+  //   );
+  //   if (!isPasswordValid) {
+  //     throw new UnauthorizedException(
+  //       '비밀번호가 일치하지 않아 탈퇴할 수 없습니다.',
+  //     );
+  //   }
 
-    const result = await this.usersRepository.softDelete({ id: userId });
-    return result.affected ? true : false;
+  //   const result = await this.usersRepository.softDelete({ id: userId });
+  //   return result.affected ? true : false;
+  // }
+
+  // OAuth 회원 가입으로 생성
+  // entity 변경
+  async createOAuthUser({ email }: IUserServiceCreateOAuth): Promise<User> {
+    const userRole = await this.rolesService.findOneByName({ name: 'USER' });
+
+    const newUser = this.usersRepository.create({
+      email,
+      role: userRole!,
+    });
+
+    return await this.usersRepository.save(newUser);
   }
 }
