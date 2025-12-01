@@ -1,18 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <title>소셜로그인</title>
+    <style>
+      /* 간단한 스타일 */
+      #result {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        word-break: break-all; /* 토큰이 길어서 줄바꿈 처리 */
+        display: none; /* 평소에는 숨김 */
+      }
+    </style>
   </head>
   <body>
-    <button onclick="googleLogin()">구글 로그인</button>
+    <h1>구글 로그인 테스트</h1>
+    <button onclick="googleLogin()">구글 로그인 (팝업)</button>
+
+    <div id="result">
+      <h3>로그인 성공!</h3>
+      <p><strong>Access Token:</strong></p>
+      <code id="tokenText"></code>
+    </div>
 
     <script>
       function googleLogin() {
-        // 2. window.open으로 팝업창 띄우기
-        // 파라미터: (주소, 창이름, 옵션)
-        window.open("http://localhost:3000/login/google", "google_login_popup", "width=500,height=600,status=no,toolbar=no,menubar=no");
+        // 팝업 열기
+        window.open(
+          'http://localhost:3000/login/google',
+          'google_login_popup',
+          'width=500,height=600,status=no,toolbar=no,menubar=no',
+        );
       }
+
+      //  팝업에서 보낸 메시지(토큰)를 수신하는 이벤트 리스너
+      window.addEventListener(
+        'message',
+        (event) => {
+          // 보안: 신뢰할 수 있는 출처(백엔드/프론트엔드 주소)인지 확인하는 것이 좋음
+          // if (event.origin !== "http://localhost:5500") return;
+
+          // 팝업에서 보낸 데이터가 있는지 확인
+          if (event.data && event.data.accessToken) {
+            const token = event.data.accessToken;
+
+            // 1. 로컬 스토리지에 저장 (선택 사항)
+            localStorage.setItem('accessToken', token);
+
+            // 2. 화면에 표시
+            const resultDiv = document.getElementById('result');
+            const tokenText = document.getElementById('tokenText');
+
+            tokenText.innerText = token;
+            resultDiv.style.display = 'block'; // 숨겨둔 영역 표시
+
+            alert('로그인이 완료되었습니다!');
+          }
+        },
+        false,
+      );
     </script>
   </body>
 </html>
