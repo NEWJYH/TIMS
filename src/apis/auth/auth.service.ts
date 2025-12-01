@@ -41,7 +41,11 @@ export class AuthService {
       },
     });
 
-    res.redirect('http://localhost:5500/frontend/social-login.html');
+    const accessToken = this.getAccessToken({ user });
+
+    res.redirect(
+      `http://localhost:5500/backend/frontend/login-success.html?accessToken=${accessToken}`,
+    );
   }
 
   async login({

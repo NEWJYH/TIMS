@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -12,7 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   IUserServiceCreate,
   IUserServiceCreateOAuth,
-  // IUserServiceDeleteAccount,
+  IUserServiceDeleteAccount,
   IUserServiceFindByEmail,
   IUserServiceUpdate,
 } from './interfaces/users-service.interface';
@@ -26,6 +27,19 @@ export class UsersService {
     private readonly usersRepository: Repository<User>, //
     private readonly rolesService: RolesService,
   ) {}
+
+  // STAFF (점주)가 직원 검색
+  async findMyStoreUsers(user: User): Promise<User[]> {
+    if (!user.storeId) {
+      throw new BadRequestException('소속된 매장이 없습니다.');
+    }
+
+    return await this.usersRepository.find({
+      where: { storeId: user.storeId },
+      relations: ['role', 'store'],
+      order: { createdAt: 'ASC' },
+    });
+  }
 
   // 단일 조회 (로그인 / Strategy용)
   async findOne(userId: string): Promise<User | null> {
@@ -53,7 +67,7 @@ export class UsersService {
     });
   }
 
-  // 단일 조회 storeId
+  // 단일 조회 storeId - 관리자 전용
   async findAllByStore(storeId: number): Promise<User[]> {
     return await this.usersRepository.find({
       where: { storeId },
@@ -62,6 +76,7 @@ export class UsersService {
     });
   }
 
+  // 일반 회원 가입
   async create({ createUserInput }: IUserServiceCreate): Promise<User> {
     const { email, password, phoneNumber, name } = createUserInput;
     // 이메일 중복 체크
@@ -105,35 +120,50 @@ export class UsersService {
   }
 
   async update({ userId, updateUserInput }: IUserServiceUpdate): Promise<User> {
-    const { password, name, phoneNumber, currentPassword } = updateUserInput;
+    const { password, name, phoneNumber, position, currentPassword } =
+      updateUserInput;
 
     const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('유저를 찾을 수 없습니다.');
     }
+    // 1. 직급 변경 (단순 정보)
+    if (position) user.position = position;
 
-    if (!user.password) {
-      throw new ConflictException(
-        '소셜 로그인 유저는 비밀번호 검증을 할 수 없습니다. (소셜 연동 해제 필요)',
+    // 2. 비밀번호 변경
+    if (password || currentPassword) {
+      // 소셜 로그인 유저일 겨우
+      if (!user.password) {
+        throw new ConflictException(
+          '소셜 로그인 유저는 비밀번호 변경/검증할 수 없습니다.',
+        );
+      }
+
+      // 일반 유저인데 비밀번호를 보내지 않은 경우
+      if (!currentPassword) {
+        throw new BadRequestException(
+          '정보를 수정(비밀번호 변경)하려면 현재 비밀번호를 입력해야 합니다.',
+        );
+      }
+
+      // 일반 유저 - 비밀번호 검증
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password,
       );
+      if (!isPasswordValid) {
+        throw new UnauthorizedException(
+          '현재 비밀번호가 일치하지 않아 정보 수정을 할 수 없습니다.',
+        );
+      }
+      // 검증 통과 후,  새비밀번호로 변경
+      if (password) {
+        const rounds = parseInt(process.env.BCRYPT_ROUNDS as string, 10);
+        user.password = await bcrypt.hash(password, rounds);
+      }
     }
 
-    // 비밀번호 변경 요청 시 -> 암호화 다시 해서 저장
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password,
-    );
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(
-        '현재 비밀번호가 일치하지 않아 정보 수정을 할 수 없습니다.',
-      );
-    }
-    if (password) {
-      const rounds = parseInt(process.env.BCRYPT_ROUNDS || '10', 10);
-      user.password = await bcrypt.hash(password, rounds);
-    }
-
-    // 전화번호 검증
+    // 3. 전화번호 변경
     if (phoneNumber && phoneNumber !== user.phoneNumber) {
       const existingPhone = await this.findOneByPhoneNumber(phoneNumber);
       if (existingPhone) {
@@ -142,14 +172,13 @@ export class UsersService {
       user.phoneNumber = phoneNumber;
     }
 
-    if (name) {
-      // TODO : 이름 필터링 (욕설, 빈문자열 방지 및 등등)
-      user.name = name;
-    }
+    // 4. 이름 변경
+    if (name) user.name = name;
 
     return await this.usersRepository.save(user);
   }
 
+  // 관리자 전용
   async delete(userId: string): Promise<boolean> {
     // 1. 삭제된 데이터까지 포함해서 조회
     const user = await this.usersRepository.findOne({
@@ -168,31 +197,40 @@ export class UsersService {
     return result.affected ? true : false;
   }
 
-  // async deleteAccount({
-  //   userId,
-  //   currentPassword,
-  // }: IUserServiceDeleteAccount): Promise<boolean> {
-  //   const user = await this.usersRepository.findOne({ where: { id: userId } });
-  //   if (!user) {
-  //     throw new NotFoundException('유저를 찾을 수 없습니다.');
-  //   }
+  // 회원 탈퇴
+  async deleteAccount({
+    userId,
+    currentPassword,
+  }: IUserServiceDeleteAccount): Promise<boolean> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('유저를 찾을 수 없습니다.');
+    }
 
-  //   const isPasswordValid = await bcrypt.compare(
-  //     currentPassword,
-  //     user.password,
-  //   );
-  //   if (!isPasswordValid) {
-  //     throw new UnauthorizedException(
-  //       '비밀번호가 일치하지 않아 탈퇴할 수 없습니다.',
-  //     );
-  //   }
+    // 일반 유저일 경우 비밀번호 인증
+    if (user.password) {
+      // 1. 일반 유저인데 비밀번호를 안 보냈다면? -> 에러!
+      if (!currentPassword) {
+        throw new BadRequestException('탈퇴하려면 비밀번호를 입력해야 합니다.');
+      }
 
-  //   const result = await this.usersRepository.softDelete({ id: userId });
-  //   return result.affected ? true : false;
-  // }
+      // 2. 비밀번호가 틀렸다면? -> 에러!
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password,
+      );
+      if (!isPasswordValid) {
+        throw new UnauthorizedException(
+          '비밀번호가 일치하지 않아 탈퇴할 수 없습니다.',
+        );
+      }
+    }
+
+    const result = await this.usersRepository.softDelete({ id: userId });
+    return result.affected ? true : false;
+  }
 
   // OAuth 회원 가입으로 생성
-  // entity 변경
   async createOAuthUser({ email }: IUserServiceCreateOAuth): Promise<User> {
     const userRole = await this.rolesService.findOneByName({ name: 'USER' });
 

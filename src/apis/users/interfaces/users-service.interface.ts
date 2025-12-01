@@ -16,7 +16,7 @@ export interface IUserServiceFindByEmail {
 
 export interface IUserServiceDeleteAccount {
   userId: string;
-  currentPassword: string;
+  currentPassword?: string;
 }
 
 export interface IUserServiceCreateOAuth {

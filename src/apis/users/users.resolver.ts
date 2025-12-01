@@ -9,14 +9,18 @@ import { Roles } from 'src/commons/decorators/roles.decorator';
 import { RoleName } from 'src/commons/enums/role.enum';
 import { RolesGuard } from 'src/commons/guards/roles.guard';
 import { CurrentUser } from 'src/commons/decorators/current-user.decorator';
-// import { DeletUserInput } from './dto/delete-user.input';
+import { DeletUserInput } from './dto/delete-user.input';
 @Resolver()
 export class UsersResolver {
   constructor(
     private readonly usersService: UsersService, //
   ) {}
 
-  // 관리자
+  // =================================================================
+  // [Query] 조회 영역
+  // =================================================================
+
+  // ADMIN
   @Roles(RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => [User])
@@ -24,17 +28,7 @@ export class UsersResolver {
     return this.usersService.findAll();
   }
 
-  // 관리자 (추방)
-  @Roles(RoleName.ADMIN)
-  @UseGuards(GqlAuthGuard('access'), RolesGuard)
-  @Mutation(() => Boolean)
-  deleteUser(
-    @Args('userId') userId: string, //
-  ): Promise<boolean> {
-    return this.usersService.delete(userId);
-  }
-
-  // 관리자
+  // ADMIN
   @Roles(RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => User, { nullable: true })
@@ -44,9 +38,8 @@ export class UsersResolver {
     return this.usersService.findOneByEmail({ email });
   }
 
-  // 직원, 관리자
-  // 특정 매장 직원 조회
-  @Roles(RoleName.STAFF, RoleName.ADMIN)
+  // ADMIN
+  @Roles(RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => [User])
   fetchUsersByStore(
@@ -55,14 +48,48 @@ export class UsersResolver {
     return this.usersService.findAllByStore(storeId);
   }
 
-  // 유저
+  // STAFF
+  @Roles(RoleName.STAFF)
+  @UseGuards(GqlAuthGuard('access'), RolesGuard)
+  @Query(() => [User])
+  fetchMyStoreUsers(
+    @CurrentUser() currentUser: User, //
+  ): Promise<User[]> {
+    return this.usersService.findMyStoreUsers(currentUser);
+  }
+
+  // ALL
   @UseGuards(GqlAuthGuard('access'))
   @Query(() => User)
-  fetchUser(@CurrentUser() currentUser: User): User {
+  fetchLoginUser(
+    @CurrentUser() currentUser: User, //
+  ): User {
     return currentUser;
   }
 
-  // 유저
+  // =================================================================
+  // [Mutation] 생성/수정/삭제 영역
+  // =================================================================
+
+  // ADMIN
+  @Roles(RoleName.ADMIN)
+  @UseGuards(GqlAuthGuard('access'), RolesGuard)
+  @Mutation(() => Boolean)
+  deleteUser(
+    @Args('userId') userId: string, //
+  ): Promise<boolean> {
+    return this.usersService.delete(userId);
+  }
+
+  // ALL
+  @Mutation(() => User)
+  createUser(
+    @Args('createUserInput') createUserInput: CreateUserInput, //
+  ): Promise<User> {
+    return this.usersService.create({ createUserInput });
+  }
+
+  // ALL
   @UseGuards(GqlAuthGuard('access'))
   @Mutation(() => User)
   updateUser(
@@ -73,24 +100,16 @@ export class UsersResolver {
     return this.usersService.update({ userId, updateUserInput });
   }
 
-  // 유저
-  // @UseGuards(GqlAuthGuard('access'))
-  // @Mutation(() => Boolean)
-  // deleteAccount(
-  //   @CurrentUser() currentUser: User,
-  //   @Args('deleteUserInput') deleteUserInput: DeletUserInput,
-  // ): Promise<boolean> {
-  //   return this.usersService.deleteAccount({
-  //     userId: currentUser.id,
-  //     currentPassword: deleteUserInput.currentPassword,
-  //   });
-  // }
-
-  // 누구나
-  @Mutation(() => User)
-  createUser(
-    @Args('createUserInput') createUserInput: CreateUserInput, //
-  ): Promise<User> {
-    return this.usersService.create({ createUserInput });
+  // ALL
+  @UseGuards(GqlAuthGuard('access'))
+  @Mutation(() => Boolean)
+  deleteAccount(
+    @CurrentUser() currentUser: User,
+    @Args('deleteUserInput') deleteUserInput: DeletUserInput,
+  ): Promise<boolean> {
+    return this.usersService.deleteAccount({
+      userId: currentUser.id,
+      currentPassword: deleteUserInput.currentPassword,
+    });
   }
 }

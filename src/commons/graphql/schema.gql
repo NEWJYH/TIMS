@@ -70,8 +70,9 @@ type Role {
 type User {
   id: String!
   email: String!
-  name: String!
-  phoneNumber: String!
+  position: String
+  name: String
+  phoneNumber: String
   roleId: Int!
   role: Role!
   storeId: Int
@@ -104,7 +105,8 @@ type Query {
   fetchUsers: [User!]!
   fetchUserByEmail(email: String!): User
   fetchUsersByStore(storeId: Int!): [User!]!
-  fetchUser: User!
+  fetchMyStoreUsers: [User!]!
+  fetchLoginUser: User!
   fetchRoles: [Role!]!
   fetchRole(name: String!): Role
   fetchStores: [Store!]!
@@ -122,8 +124,9 @@ type Query {
 
 type Mutation {
   deleteUser(userId: String!): Boolean!
-  updateUser(updateUserInput: UpdateUserInput!): User!
   createUser(createUserInput: CreateUserInput!): User!
+  updateUser(updateUserInput: UpdateUserInput!): User!
+  deleteAccount(deleteUserInput: DeletUserInput!): Boolean!
   createRole(createRoleInput: CreateRoleInput!): Role!
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
   createStore(createStoreInput: CreateStoreInput!): Store!
@@ -146,18 +149,23 @@ type Mutation {
   logout: String!
 }
 
-input UpdateUserInput {
-  password: String
-  name: String
-  phoneNumber: String
-  currentPassword: String!
-}
-
 input CreateUserInput {
   email: String!
   password: String!
   name: String!
   phoneNumber: String!
+}
+
+input UpdateUserInput {
+  password: String
+  name: String
+  phoneNumber: String
+  position: String
+  currentPassword: String
+}
+
+input DeletUserInput {
+  currentPassword: String
 }
 
 input CreateRoleInput {

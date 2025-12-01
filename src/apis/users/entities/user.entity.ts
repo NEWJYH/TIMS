@@ -44,9 +44,18 @@ export class User {
     type: 'varchar',
     length: 50,
     nullable: true,
+    comment: '직급 (예: 점장, 정비팀장, 매니저)',
+  })
+  @Field(() => String, { nullable: true })
+  position?: string;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
     comment: '사용자 실명',
   })
-  @Field(() => String)
+  @Field(() => String, { nullable: true })
   name?: string;
 
   @Column({
@@ -56,7 +65,7 @@ export class User {
     nullable: true,
     comment: '휴대전화번호',
   })
-  @Field(() => String)
+  @Field(() => String, { nullable: true })
   phoneNumber?: string;
 
   @Column({ name: 'role_id', comment: '권한 FK' })
