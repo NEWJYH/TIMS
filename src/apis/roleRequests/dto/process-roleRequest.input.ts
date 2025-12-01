@@ -12,8 +12,4 @@ export class ProcessRoleRequestInput {
   @Field(() => RoleRequestStatus)
   @IsEnum(RoleRequestStatus)
   status: RoleRequestStatus;
-
-  @Field(() => Int, { nullable: true })
-  @IsInt()
-  storeId?: number;
 }

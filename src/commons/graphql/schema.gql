@@ -86,6 +86,8 @@ type RoleRequest {
   id: Int!
   userId: String!
   user: User!
+  storeId: Int
+  store: Store
   roleId: Int!
   role: Role!
   status: RoleRequestStatus!
@@ -119,7 +121,7 @@ type Query {
   fetchTireCategories: [TireCategory!]!
   fetchInventories(storeId: Int!): [Inventory!]!
   fetchInventory(storeId: Int!, tireId: Int!): Inventory
-  fetchRoleRequests: [RoleRequest!]!
+  fetchRoleRequests(status: RoleRequestStatus): [RoleRequest!]!
 }
 
 type Mutation {
@@ -142,8 +144,8 @@ type Mutation {
   stockIn(stockInInput: StockInInput!): Inventory!
   stockOut(stockOutInput: StockOutInput!): Inventory!
   stockAdjust(stockAdjustInput: StockAdjustInput!): Inventory!
-  requestRoleChange(createRoleRequestInput: CreateRoleRequestInput!): RoleRequest!
   processRoleRequest(processRoleRequestInput: ProcessRoleRequestInput!): RoleRequest!
+  requestRoleChange(createRoleRequestInput: CreateRoleRequestInput!): RoleRequest!
   login(email: String!, password: String!): String!
   restoreAcessToken: String!
   logout: String!
@@ -255,12 +257,12 @@ input StockAdjustInput {
   memo: String
 }
 
-input CreateRoleRequestInput {
-  roleName: String!
-}
-
 input ProcessRoleRequestInput {
   requestId: Int!
   status: RoleRequestStatus!
-  storeId: Int
+}
+
+input CreateRoleRequestInput {
+  roleName: String!
+  storeId: Int!
 }

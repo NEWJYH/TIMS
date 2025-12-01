@@ -10,20 +10,48 @@ import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { RolesGuard } from 'src/commons/guards/roles.guard';
 import { CurrentUser } from 'src/commons/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { RoleRequestStatus } from 'src/commons/enums/roleRequestStatus.enum';
 
 @Resolver(() => RoleRequest)
 export class RoleRequestsResolver {
   constructor(private readonly roleRequestsService: RoleRequestsService) {}
 
-  // 관리자
-  @Roles(RoleName.ADMIN)
+  // =================================================================
+  // [Query] 조회 영역
+  // =================================================================
+
+  // STAFF, ADMIN
+  @Roles(RoleName.ADMIN, RoleName.STAFF)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => [RoleRequest])
-  fetchRoleRequests(): Promise<RoleRequest[]> {
-    return this.roleRequestsService.findAll();
+  fetchRoleRequests(
+    @CurrentUser() currentUser: User,
+    @Args('status', { type: () => RoleRequestStatus, nullable: true })
+    status?: RoleRequestStatus,
+  ): Promise<RoleRequest[]> {
+    return this.roleRequestsService.findAll({ user: currentUser, status });
   }
 
-  // 유저
+  // =================================================================
+  // [Mutation] 생성/수정/삭제 영역
+  // =================================================================
+
+  // ADMIN
+  @Roles(RoleName.STAFF, RoleName.ADMIN)
+  @UseGuards(GqlAuthGuard('access'), RolesGuard)
+  @Mutation(() => RoleRequest)
+  processRoleRequest(
+    @CurrentUser() currentUser: User,
+    @Args('processRoleRequestInput')
+    processRoleRequestInput: ProcessRoleRequestInput,
+  ): Promise<RoleRequest> {
+    return this.roleRequestsService.process({
+      approverId: currentUser.id,
+      processRoleRequestInput,
+    });
+  }
+
+  // ALL
   @UseGuards(GqlAuthGuard('access'))
   @Mutation(() => RoleRequest)
   requestRoleChange(
@@ -34,21 +62,6 @@ export class RoleRequestsResolver {
     return this.roleRequestsService.create({
       userId: currentUser.id,
       createRoleRequestInput,
-    });
-  }
-
-  // 관리자
-  @Roles(RoleName.ADMIN)
-  @UseGuards(GqlAuthGuard('access'), RolesGuard)
-  @Mutation(() => RoleRequest)
-  processRoleRequest(
-    @CurrentUser() currentUser: User,
-    @Args('processRoleRequestInput')
-    processRoleRequestInput: ProcessRoleRequestInput,
-  ): Promise<RoleRequest> {
-    return this.roleRequestsService.process({
-      adminId: currentUser.id,
-      processRoleRequestInput,
     });
   }
 }
