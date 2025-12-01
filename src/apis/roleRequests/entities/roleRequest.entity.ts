@@ -1,5 +1,6 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { Role } from 'src/apis/roles/entities/role.entity';
+import { Store } from 'src/apis/stores/entities/store.entity';
 import { User } from 'src/apis/users/entities/user.entity';
 import { RoleRequestStatus } from 'src/commons/enums/roleRequestStatus.enum';
 import {
@@ -28,6 +29,20 @@ export class RoleRequest {
   @JoinColumn({ name: 'user_id' })
   @Field(() => User)
   user: User;
+
+  @Column({
+    name: 'store_id',
+    type: 'int',
+    nullable: true,
+    comment: '희망 매장 ID',
+  })
+  @Field(() => Int, { nullable: true })
+  storeId?: number;
+
+  @ManyToOne(() => Store)
+  @JoinColumn({ name: 'store_id' })
+  @Field(() => Store, { nullable: true })
+  store?: Store;
 
   // Role
   @Column({ name: 'role_id' })
