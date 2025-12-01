@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>소셜로그인</title>
+  </head>
+  <body>
+    <button onclick="googleLogin()">구글 로그인</button>
+
+    <script>
+      function googleLogin() {
+        // 2. window.open으로 팝업창 띄우기
+        // 파라미터: (주소, 창이름, 옵션)
+        window.open("http://localhost:3000/login/google", "google_login_popup", "width=500,height=600,status=no,toolbar=no,menubar=no");
+      }
+    </script>
+  </body>
+</html>

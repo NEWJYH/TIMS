@@ -3,12 +3,14 @@ import { UsersService } from 'src/apis/users/users.service';
 import {
   IAuthServiceGetAccessToken,
   IAuthServiceLogin,
+  IAuthServiceLoginOAuth,
   IAuthServiceLogout,
   IAuthServiceRestoreAccessToken,
   IAuthServiceSetRefreshToken,
 } from './interfaces/auth-service.interface';
 import * as bcrypt from 'bcrypt';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
+import { IContext } from 'src/commons/interfaces/context';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +19,30 @@ export class AuthService {
     private readonly usersService: UsersService, //
     private readonly jwtService: JwtService,
   ) {}
+
+  // Ouath 로그인 방식
+  async loginOAuth({ req, res }: IAuthServiceLoginOAuth) {
+    const email = req.user.email;
+
+    // 1. 회원조회
+    let user = await this.usersService.findOneByEmail({
+      email: email,
+    });
+
+    // 2. 회원가입이 안돼있다면? 자동회원가입
+    if (!user) user = await this.usersService.createOAuthUser({ email });
+
+    // 3. 회원가입이 돼있다면? 로그인(refreshToken 만들어서 브라우저에 전송)
+    this.setRefreshToken({
+      user,
+      context: {
+        req: req as IContext['req'], //
+        res,
+      },
+    });
+
+    res.redirect('http://localhost:5500/frontend/social-login.html');
+  }
 
   async login({
     email,
@@ -28,6 +54,11 @@ export class AuthService {
 
     // 2. 일치하는 유저가 없으면?! 에러 던지기!!!
     if (!user) throw new UnauthorizedException('이메일이 존재하지 않습니다.');
+
+    if (!user.password)
+      throw new UnauthorizedException(
+        '소셜 로그인(구글 등)으로 가입된 계정입니다.',
+      );
 
     // 3. 일치하는 유저가 있지만, 비밀번호가 틀렸다면?!
     const isAuth = await bcrypt.compare(password, user.password);
