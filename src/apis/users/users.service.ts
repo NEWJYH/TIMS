@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { RolesService } from '../roles/roles.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -17,8 +17,13 @@ import {
   IUserServiceFindByEmail,
   IUserServiceUpdate,
 } from './interfaces/users-service.interface';
-
 import * as bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
+import { OnboardInput } from './dto/onboard.input';
+import { Store } from '../stores/entities/store.entity';
+import { RoleRequest } from '../roleRequests/entities/roleRequest.entity';
+import { RoleRequestStatus } from 'src/commons/enums/roleRequestStatus.enum';
+import { Role } from '../roles/entities/role.entity';
 
 @Injectable()
 export class UsersService {
@@ -26,6 +31,7 @@ export class UsersService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>, //
     private readonly rolesService: RolesService,
+    private readonly dataSource: DataSource,
   ) {}
 
   // STAFF (점주)가 직원 검색
@@ -240,5 +246,117 @@ export class UsersService {
     });
 
     return await this.usersRepository.save(newUser);
+  }
+
+  // [통합] 온보딩 : 회원 가입 이후 정보입력 권한 신청 부
+  async onboardUser(
+    userId: string,
+    onBoardInput: OnboardInput,
+  ): Promise<boolean> {
+    const {
+      isCEO,
+      name,
+      position,
+      storeName,
+      storeAddress,
+      businessLicenseUrl,
+      storeId,
+    } = onBoardInput;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 유저 조회
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!user) throw new NotFoundException('유저가 없습니다.');
+      if (user.storeId) {
+        throw new ConflictException(
+          '이미 소속된 매장이 있어 가입 절차를 진행할 수 없습니다.',
+        );
+      }
+
+      const existingRequest = await queryRunner.manager.findOne(RoleRequest, {
+        where: {
+          userId: user.id,
+          status: RoleRequestStatus.PENDING,
+        },
+      });
+      if (existingRequest) {
+        throw new ConflictException(
+          '이미 승인 대기 중인 요청이 있습니다. 관리자 승인을 기다려주세요.',
+        );
+      }
+
+      let targetStore: Store | null = null;
+      let targetRoleName: string;
+
+      if (isCEO) {
+        //  사장님 -> 매장 생성 + STAFF 요청
+        if (!storeName || !storeAddress) {
+          throw new BadRequestException(
+            '사장님은 매장명과 주소를 입력해야 합니다.',
+          );
+        }
+        // 매장 생성
+        const newStore = queryRunner.manager.create(Store, {
+          name: storeName,
+          address: storeAddress,
+          businessLicenseUrl: businessLicenseUrl || undefined,
+          code: uuidv4(),
+          isActive: true,
+        });
+        targetStore = await queryRunner.manager.save(newStore);
+        targetRoleName = 'STAFF'; // 점장 권한 요청
+      } else {
+        // [CASE B] 직원 -> 기존 매장 선택 + USER 요청
+        if (!storeId) {
+          throw new BadRequestException(
+            '직원은 소속될 매장을 선택해야 합니다.',
+          );
+        }
+
+        // 매장 조회
+        targetStore = await queryRunner.manager.findOne(Store, {
+          where: { id: storeId },
+        });
+        if (!targetStore)
+          throw new NotFoundException('존재하지 않는 매장입니다.');
+        targetRoleName = 'USER'; // 일반 권한 요청
+      }
+
+      // 공통 로직 (유저 업데이트 + 권한 요청)
+      user.name = name;
+      user.position = position;
+      user.storeId = targetStore.id;
+      await queryRunner.manager.save(user);
+
+      // 권한 요청 생성
+      const role = await queryRunner.manager.findOne(Role, {
+        where: { name: targetRoleName },
+      });
+      if (!role)
+        throw new InternalServerErrorException('권한 정보가 없습니다.');
+
+      const roleRequest = queryRunner.manager.create(RoleRequest, {
+        userId: user.id,
+        roleId: role.id,
+        storeId: targetStore.id,
+        status: RoleRequestStatus.PENDING,
+      });
+      await queryRunner.manager.save(roleRequest);
+
+      await queryRunner.commitTransaction();
+      return true;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

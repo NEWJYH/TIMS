@@ -10,6 +10,7 @@ import { RoleName } from 'src/commons/enums/role.enum';
 import { RolesGuard } from 'src/commons/guards/roles.guard';
 import { CurrentUser } from 'src/commons/decorators/current-user.decorator';
 import { DeletUserInput } from './dto/delete-user.input';
+import { OnboardInput } from './dto/onboard.input';
 @Resolver()
 export class UsersResolver {
   constructor(
@@ -111,5 +112,15 @@ export class UsersResolver {
       userId: currentUser.id,
       currentPassword: deleteUserInput.currentPassword,
     });
+  }
+
+  // ALL
+  @UseGuards(GqlAuthGuard('access'))
+  @Mutation(() => Boolean)
+  async onboardUser(
+    @CurrentUser() currentUser: User, // 토큰에서 내 ID(userId) 추출
+    @Args('onBoardInput') onBoardInput: OnboardInput,
+  ): Promise<boolean> {
+    return this.usersService.onboardUser(currentUser.id, onBoardInput);
   }
 }

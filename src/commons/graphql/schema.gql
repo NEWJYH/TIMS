@@ -159,6 +159,7 @@ type Mutation {
   createUser(createUserInput: CreateUserInput!): User!
   updateUser(updateUserInput: UpdateUserInput!): User!
   deleteAccount(deleteUserInput: DeletUserInput!): Boolean!
+  onboardUser(onBoardInput: OnboardInput!): Boolean!
   createRole(createRoleInput: CreateRoleInput!): Role!
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
   createStore(createStoreInput: CreateStoreInput!): Store!
@@ -198,6 +199,16 @@ input UpdateUserInput {
 
 input DeletUserInput {
   currentPassword: String
+}
+
+input OnboardInput {
+  name: String!
+  position: String!
+  isCEO: Boolean!
+  storeName: String
+  storeAddress: String
+  businessLicenseUrl: String
+  storeId: Int
 }
 
 input CreateRoleInput {
