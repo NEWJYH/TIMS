@@ -11,6 +11,8 @@ import { RoleName } from 'src/commons/enums/role.enum';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { RolesGuard } from 'src/commons/guards/roles.guard';
+import { CurrentUser } from 'src/commons/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 @Resolver(() => Inventory)
 export class InventoriesResolver {
@@ -18,54 +20,67 @@ export class InventoriesResolver {
     private readonly inventoriesService: InventoriesService, //
   ) {}
 
-  // 특정 매장의 전체 재고 조회
-  @Roles(RoleName.STAFF, RoleName.ADMIN)
+  // =================================================================
+  // [Query] 조회 영역
+  // =================================================================
+
+  // USER, STAFF, ADMIN
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => [Inventory])
   fetchInventories(
-    @Args('storeId', { type: () => Int }) storeId: number,
+    @CurrentUser() currentUser: User,
+    @Args('storeId', { type: () => Int, nullable: true }) storeId?: number,
   ): Promise<Inventory[]> {
-    return this.inventoriesService.findAllByStore(storeId);
+    return this.inventoriesService.findAll(currentUser, storeId);
   }
 
-  // 특정 매장의 특정 타이어 재고 조회
-  @Roles(RoleName.STAFF, RoleName.ADMIN)
+  // USER, STAFF, ADMIN
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => Inventory, { nullable: true })
   fetchInventory(
-    @Args('storeId', { type: () => Int }) storeId: number,
+    @CurrentUser() currentUser: User,
     @Args('tireId', { type: () => Int }) tireId: number,
+    @Args('storeId', { type: () => Int, nullable: true }) storeId?: number,
   ): Promise<Inventory | null> {
-    return this.inventoriesService.findOne(storeId, tireId);
+    return this.inventoriesService.findOne(currentUser, tireId, storeId);
   }
 
-  // 입고
-  @Roles(RoleName.STAFF, RoleName.ADMIN)
+  // =================================================================
+  // [Mutation] 생성/수정/삭제 영역
+  // =================================================================
+
+  // USER, STAFF, ADMIN
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Mutation(() => Inventory)
   stockIn(
+    @CurrentUser() currentUser: User, //
     @Args('stockInInput') stockInInput: StockInInput,
   ): Promise<Inventory> {
-    return this.inventoriesService.stockIn(stockInInput);
+    return this.inventoriesService.stockIn(currentUser, stockInInput);
   }
 
-  // 출고
-  @Roles(RoleName.STAFF, RoleName.ADMIN)
+  // USER, STAFF, ADMIN
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Mutation(() => Inventory)
   stockOut(
+    @CurrentUser() currentUser: User, //
     @Args('stockOutInput') stockOutInput: StockOutInput,
   ): Promise<Inventory> {
-    return this.inventoriesService.stockOut(stockOutInput);
+    return this.inventoriesService.stockOut(currentUser, stockOutInput);
   }
 
-  // 조정
-  @Roles(RoleName.STAFF, RoleName.ADMIN)
+  // USER, STAFF, ADMIN
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Mutation(() => Inventory)
   stockAdjust(
+    @CurrentUser() currentUser: User, //
     @Args('stockAdjustInput') stockAdjustInput: StockAdjustInput,
   ): Promise<Inventory> {
-    return this.inventoriesService.stockAdjust(stockAdjustInput);
+    return this.inventoriesService.stockAdjust(currentUser, stockAdjustInput);
   }
 }

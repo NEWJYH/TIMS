@@ -119,8 +119,8 @@ type Query {
   fetchTireBrand(tireBrandId: Float!): TireBrand!
   fetchTireCategory(tireCategoryId: Int!): TireCategory!
   fetchTireCategories: [TireCategory!]!
-  fetchInventories(storeId: Int!): [Inventory!]!
-  fetchInventory(storeId: Int!, tireId: Int!): Inventory
+  fetchInventories(storeId: Int): [Inventory!]!
+  fetchInventory(tireId: Int!, storeId: Int): Inventory
   fetchRoleRequests(status: RoleRequestStatus): [RoleRequest!]!
 }
 
@@ -234,26 +234,23 @@ input UpdateTireCategoryInput {
 }
 
 input StockInInput {
-  storeId: Int!
+  storeId: Int
   tireId: Int!
   quantity: Int!
-  userId: String!
   memo: String
 }
 
 input StockOutInput {
-  storeId: Int!
+  storeId: Int
   tireId: Int!
   quantity: Int!
-  userId: String!
   memo: String
 }
 
 input StockAdjustInput {
-  storeId: Int!
+  storeId: Int
   tireId: Int!
   quantity: Int!
-  userId: String!
   memo: String
 }
 

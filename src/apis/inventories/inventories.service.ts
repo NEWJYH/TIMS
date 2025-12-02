@@ -1,11 +1,11 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
-  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import { Inventory } from './entities/inventory.entity';
 
 import { StoresService } from '../stores/stores.service';
@@ -17,13 +17,16 @@ import {
   StockInInput,
   StockOutInput,
 } from './dto/stock-transaction.input';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
-export class InventoriesService implements OnModuleInit {
-  // 캐싱
-  private inTypeId: number;
-  private outTypeId: number;
-  private adjustTypeId: number;
+export class InventoriesService {
+  // 캐싱용 객체 (초기값 null)
+  private typeIds: Record<string, number | null> = {
+    IN: null,
+    OUT: null,
+    ADJUST: null,
+  };
 
   constructor(
     @InjectRepository(Inventory)
@@ -37,40 +40,59 @@ export class InventoriesService implements OnModuleInit {
     private readonly tiresService: TiresService,
   ) {}
 
-  async onModuleInit() {
-    const inType = await this.typeRepository.findOne({ where: { name: 'IN' } });
-    const outType = await this.typeRepository.findOne({
-      where: { name: 'OUT' },
-    });
-    const adjustType = await this.typeRepository.findOne({
-      where: { name: 'ADJUST' },
-    });
+  private async getTypeId(name: 'IN' | 'OUT' | 'ADJUST'): Promise<number> {
+    if (this.typeIds[name]) return this.typeIds[name]; // 캐시 있으면 리턴
 
-    if (inType && outType && adjustType) {
-      this.inTypeId = inType.id;
-      this.outTypeId = outType.id;
-      this.adjustTypeId = adjustType.id;
-    } else {
-      console.log('seed 실행필요');
+    const type = await this.typeRepository.findOne({ where: { name } });
+    if (!type) {
+      throw new InternalServerErrorException(
+        `[System] '${name}' 타입 데이터가 없습니다. 'npm run seed'를 실행하세요.`,
+      );
     }
-    return;
+    this.typeIds[name] = type.id; // 캐싱
+    return type.id;
   }
 
-  async stockIn(input: StockInInput): Promise<Inventory> {
-    const { storeId, tireId, quantity, userId, memo } = input;
-    const queryRunner = this.dataSource.createQueryRunner();
+  private getTargetStoreId(user: User, inputStoreId?: number): number {
+    // 관리자(ADMIN)인 경우
+    if (user.role.name === 'ADMIN') {
+      // 입력한 storeId가 있으면 그걸 쓰고, 없으면 본인 소속 매장(있다면)을 씀
+      if (inputStoreId) return inputStoreId;
+      if (user.storeId) return user.storeId;
+      throw new BadRequestException(
+        '관리자는 작업할 매장 ID(storeId)를 입력해야 합니다.',
+      );
+    }
 
+    // 일반 직원(USER, STAFF)인 경우
+    // 입력값 무시하고 무조건 본인 소속 매장으로 강제함 (보안)
+    if (!user.storeId) {
+      throw new BadRequestException(
+        '소속된 매장이 없습니다. 매장 배정 후 이용해주세요.',
+      );
+    }
+    return user.storeId;
+  }
+
+  async stockIn(user: User, stockInInput: StockInInput): Promise<Inventory> {
+    const typeId = await this.getTypeId('IN');
+
+    const { tireId, quantity, memo } = stockInInput;
+
+    const storeId = this.getTargetStoreId(user, stockInInput.storeId);
+
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // 1. 매장/타이어 존재 검증
+      // 매장/타이어 존재 검증
       const store = await this.storesService.findOne(storeId);
       const tire = await this.tiresService.findOne(tireId);
       if (!store || !tire)
         throw new NotFoundException('매장 또는 타이어 정보가 없습니다.');
 
-      // 2. 재고 조회 (없으면 생성해야 함)
+      // 재고 조회
       let inventory = await queryRunner.manager.findOne(Inventory, {
         where: { storeId, tireId },
       });
@@ -92,8 +114,8 @@ export class InventoriesService implements OnModuleInit {
       // 이력 기록
       const history = this.historyRepository.create({
         inventoryId: inventory.id,
-        userId,
-        typeId: this.inTypeId,
+        userId: user.id,
+        typeId: typeId,
         quantityChange: quantity,
         currentQuantity: inventory.quantity,
         memo,
@@ -103,7 +125,7 @@ export class InventoriesService implements OnModuleInit {
       await queryRunner.commitTransaction();
 
       history.type = {
-        id: this.inTypeId,
+        id: typeId,
         name: 'IN',
       } as InventoryHistoryType;
 
@@ -120,21 +142,22 @@ export class InventoriesService implements OnModuleInit {
     }
   }
 
-  // =================================================================
-  // 2. 재고 출고 (STOCK OUT)
-  // =================================================================
-  async stockOut(input: StockOutInput): Promise<Inventory> {
-    const { storeId, tireId, quantity, userId, memo } = input;
-    const queryRunner = this.dataSource.createQueryRunner();
+  async stockOut(user: User, stockOutInput: StockOutInput): Promise<Inventory> {
+    const typeId = await this.getTypeId('OUT');
 
+    const { tireId, quantity, memo } = stockOutInput;
+
+    const storeId = this.getTargetStoreId(user, stockOutInput.storeId);
+
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
       const inventory = await queryRunner.manager.findOne(Inventory, {
         where: { storeId, tireId },
-
         relations: ['tire', 'store'],
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!inventory) {
@@ -142,7 +165,6 @@ export class InventoriesService implements OnModuleInit {
       }
 
       // 재고 부족 체크
-      // quantity가 양수(정상 출고)일 때만 체크. 음수(출고 취소/반품)면 체크 불필요
       if (quantity > 0 && inventory.quantity < quantity) {
         throw new BadRequestException(
           `재고가 부족합니다. (현재: ${inventory.quantity}, 요청: ${quantity})`,
@@ -150,16 +172,14 @@ export class InventoriesService implements OnModuleInit {
       }
 
       // 수량 변경 (출고: -)
-      // input.quantity가 5면 -> inventory.quantity - 5
-      // input.quantity가 -5면(정정) -> inventory.quantity - (-5) = +5 (복구됨)
       inventory.quantity -= quantity;
       await queryRunner.manager.save(inventory);
 
       // 이력 기록
       const history = this.historyRepository.create({
         inventoryId: inventory.id,
-        userId,
-        typeId: this.outTypeId,
+        userId: user.id,
+        typeId: typeId,
         quantityChange: -quantity,
         currentQuantity: inventory.quantity,
         memo,
@@ -167,7 +187,7 @@ export class InventoriesService implements OnModuleInit {
       await queryRunner.manager.save(history);
 
       await queryRunner.commitTransaction();
-
+      history.type = { id: typeId, name: 'OUT' } as InventoryHistoryType;
       inventory.histories = [history];
       return inventory;
     } catch (error) {
@@ -177,17 +197,27 @@ export class InventoriesService implements OnModuleInit {
       await queryRunner.release();
     }
   }
-  async stockAdjust(input: StockAdjustInput): Promise<Inventory> {
-    const { storeId, tireId, quantity, userId, memo } = input;
-    const queryRunner = this.dataSource.createQueryRunner();
 
+  async stockAdjust(
+    user: User,
+    stockAdjustInput: StockAdjustInput,
+  ): Promise<Inventory> {
+    const typeId = await this.getTypeId('ADJUST');
+
+    const { tireId, quantity, memo } = stockAdjustInput;
+
+    const storeId = this.getTargetStoreId(user, stockAdjustInput.storeId);
+
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // 1. 재고 조회 (비관적 락)
+      // 재고 조회
       let inventory = await queryRunner.manager.findOne(Inventory, {
         where: { storeId, tireId },
+        relations: ['tire', 'store'],
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!inventory && quantity < 0) {
@@ -218,8 +248,8 @@ export class InventoriesService implements OnModuleInit {
       // 이력 기록
       const history = this.historyRepository.create({
         inventoryId: inventory.id,
-        userId,
-        typeId: this.adjustTypeId,
+        userId: user.id,
+        typeId: typeId,
         quantityChange: quantity,
         currentQuantity: inventory.quantity,
         memo,
@@ -228,7 +258,7 @@ export class InventoriesService implements OnModuleInit {
 
       await queryRunner.commitTransaction();
       history.type = {
-        id: this.adjustTypeId,
+        id: typeId,
         name: 'ADJUST',
       } as InventoryHistoryType;
 
@@ -242,18 +272,57 @@ export class InventoriesService implements OnModuleInit {
     }
   }
 
-  async findAllByStore(storeId: number): Promise<Inventory[]> {
+  async findAll(user: User, storeId?: number): Promise<Inventory[]> {
+    const where: FindOptionsWhere<Inventory> = {};
+
+    if (user.role.name === 'ADMIN') {
+      // ADMIN
+      if (storeId) {
+        where.storeId = storeId;
+      }
+    } else {
+      // USER, STAFF
+      if (!user.storeId) {
+        throw new BadRequestException(
+          '소속된 매장이 없어 재고를 조회할 수 없습니다.',
+        );
+      }
+      where.storeId = user.storeId;
+    }
+
     return await this.inventoriesRepository.find({
-      where: { storeId },
-      relations: ['tire', 'tire.brand', 'tire.category'],
+      where,
+      relations: ['tire', 'tire.brand', 'tire.category', 'store'],
       order: { updatedAt: 'DESC' },
     });
   }
 
-  async findOne(storeId: number, tireId: number): Promise<Inventory | null> {
+  async findOne(
+    user: User,
+    tireId: number,
+    storeId?: number,
+  ): Promise<Inventory | null> {
+    const where: FindOptionsWhere<Inventory> = {};
+    where.tireId = tireId;
+
+    if (user.role.name === 'ADMIN') {
+      // ADMIN
+      if (storeId) {
+        where.storeId = storeId;
+      }
+    } else {
+      // USER, STAFF
+      if (!user.storeId) {
+        throw new BadRequestException(
+          '소속된 매장이 없어 재고를 조회할 수 없습니다.',
+        );
+      }
+      where.storeId = user.storeId;
+    }
+
     return await this.inventoriesRepository.findOne({
-      where: { storeId, tireId },
-      relations: ['tire'],
+      where,
+      relations: ['tire', 'tire.brand', 'tire.category', 'store'],
     });
   }
 }
