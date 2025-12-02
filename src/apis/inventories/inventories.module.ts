@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Inventory } from './entities/inventory.entity';
 import { InventoriesResolver } from './inventories.resolver';
 import { InventoriesService } from './inventories.service';
-import { InventoryHistory } from '../inventoryHistory/entities/inventoryHistory.entity';
+import { InventoryHistory } from '../inventoryHistories/entities/inventoryHistory.entity';
 import { InventoryHistoryType } from '../inventoryHistoryTypes/entities/inventoryHistoryType.entity';
 import { StoresModule } from '../stores/stores.module';
 import { TiresModule } from '../tires/tires.module';

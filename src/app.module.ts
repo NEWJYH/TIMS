@@ -11,10 +11,12 @@ import { RoleRequestsModule } from './apis/roleRequests/roleRequests.module';
 import { AuthModule } from './apis/auth/auth.module';
 import { Request, Response } from 'express';
 import { ConfigModule } from '@nestjs/config';
+import { InventoryHistoriesModule } from './apis/inventoryHistories/inventoryHistories.module';
 // import * as Joi from 'joi';
 
 @Module({
   imports: [
+    InventoryHistoriesModule,
     UsersModule, //
     RolesModule,
     StoresModule,

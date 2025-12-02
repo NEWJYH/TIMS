@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { InventoryHistory } from 'src/apis/inventoryHistory/entities/inventoryHistory.entity';
+import { InventoryHistory } from 'src/apis/inventoryHistories/entities/inventoryHistory.entity';
 import { Store } from 'src/apis/stores/entities/store.entity';
 import { Tire } from 'src/apis/tires/entities/tire.entity';
 import {
