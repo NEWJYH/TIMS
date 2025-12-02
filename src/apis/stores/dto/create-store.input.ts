@@ -1,22 +1,20 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsNotEmpty, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 @InputType()
 export class CreateStoreInput {
   @Field(() => String)
-  @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty({ message: '매장명은 필수입니다.' })
   name: string;
 
   @Field(() => String)
-  @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty({ message: '주소는 필수입니다.' })
   address: string;
 
   @Field(() => String, { nullable: true })
   @IsOptional()
-  @IsNotEmpty()
-  telePhoneNumber?: string;
-
-  @Field(() => String)
-  @IsNotEmpty()
-  code: string;
+  @IsString()
+  businessLicenseUrl?: string;
 }
