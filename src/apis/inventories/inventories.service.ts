@@ -10,7 +10,7 @@ import { Inventory } from './entities/inventory.entity';
 
 import { StoresService } from '../stores/stores.service';
 import { TiresService } from '../tires/tires.service';
-import { InventoryHistory } from '../inventoryHistory/entities/inventoryHistory.entity';
+import { InventoryHistory } from '../inventoryHistories/entities/inventoryHistory.entity';
 import { InventoryHistoryType } from '../inventoryHistoryTypes/entities/inventoryHistoryType.entity';
 import {
   StockAdjustInput,

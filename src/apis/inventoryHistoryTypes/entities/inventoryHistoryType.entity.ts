@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { InventoryHistory } from 'src/apis/inventoryHistory/entities/inventoryHistory.entity';
+import { InventoryHistory } from 'src/apis/inventoryHistories/entities/inventoryHistory.entity';
 import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 
 @Entity('inventory_history_types')
