@@ -19,6 +19,7 @@ export class InventoryHistoriesResolver {
   // =================================================================
   // [Query] 조회 영역
   // =================================================================
+
   // USSER, STAFF, ADMIN
   @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
@@ -28,7 +29,6 @@ export class InventoryHistoriesResolver {
     @Args('fetchInventoryHistoryInput')
     fetchInventoryHistoryInput: FetchInventoryHistoryInput,
   ): Promise<FetchInventoryHistoryOutput> {
-    // 서비스의 인터페이스 구조에 맞춰서 전달
     return this.inventoryHistoriesService.findAll({
       user: currentUser,
       fetchInventoryHistoryInput,

@@ -39,19 +39,30 @@ export class Store {
     name: 'tele_phone_number',
     type: 'varchar',
     length: 20,
+    nullable: true,
     comment: '전화번호',
   })
-  @Field(() => String)
-  telePhoneNumber: string;
+  @Field(() => String, { nullable: true })
+  telePhoneNumber?: string;
 
   @Column({
     type: 'varchar',
     length: 50,
-    unique: true,
+    nullable: true,
     comment: '지점 코드',
   })
-  @Field(() => String)
-  code: string;
+  @Field(() => String, { nullable: true })
+  code?: string;
+
+  @Column({
+    name: 'business_license_url',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    comment: '사업자등록증 이미지 URL',
+  })
+  @Field(() => String, { nullable: true })
+  businessLicenseUrl?: string;
 
   @Column({
     name: 'is_active',

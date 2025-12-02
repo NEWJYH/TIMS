@@ -8,6 +8,8 @@ import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { RolesGuard } from 'src/commons/guards/roles.guard';
 import { RoleName } from 'src/commons/enums/role.enum';
 import { Roles } from 'src/commons/decorators/roles.decorator';
+import { User } from '../users/entities/user.entity';
+import { CurrentUser } from 'src/commons/decorators/current-user.decorator';
 
 @Resolver(() => Store)
 export class StoresResolver {
@@ -15,19 +17,32 @@ export class StoresResolver {
     private readonly storesService: StoresService, //
   ) {}
 
-  @UseGuards(GqlAuthGuard('access'))
+  // =================================================================
+  // [Query] 조회 영역
+  // =================================================================
+
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
+  @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => [Store])
-  fetchStores(): Promise<Store[]> {
-    return this.storesService.findAll();
+  fetchStores(
+    @CurrentUser() currentUser: User, //
+  ): Promise<Store[]> {
+    return this.storesService.findAll(currentUser);
   }
 
-  @UseGuards(GqlAuthGuard('access'))
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
+  @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => Store, { nullable: true })
   fetchStore(
-    @Args('storeId', { type: () => Int }) storeId: number,
+    @CurrentUser() currentUser: User, //
+    @Args('storeId', { type: () => Int, nullable: true }) storeId?: number,
   ): Promise<Store> {
-    return this.storesService.findOne(storeId);
+    return this.storesService.findMyStore(currentUser, storeId);
   }
+
+  // =================================================================
+  // [Mutation] 생성/수정/삭제 영역
+  // =================================================================
 
   @Roles(RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
@@ -38,13 +53,14 @@ export class StoresResolver {
     return this.storesService.create({ createStoreInput });
   }
 
-  @Roles(RoleName.ADMIN)
+  @Roles(RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Mutation(() => Store)
   updateStore(
+    @CurrentUser() currentUser: User,
     @Args('updateStoreInput') updateStoreInput: UpdateStoreInput,
   ): Promise<Store> {
-    return this.storesService.update({ updateStoreInput });
+    return this.storesService.update({ user: currentUser, updateStoreInput });
   }
 
   @Roles(RoleName.ADMIN)

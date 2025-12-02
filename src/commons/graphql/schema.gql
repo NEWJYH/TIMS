@@ -6,8 +6,9 @@ type Store {
   id: Int!
   name: String!
   address: String!
-  telePhoneNumber: String!
-  code: String!
+  telePhoneNumber: String
+  code: String
+  businessLicenseUrl: String
   isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -62,6 +63,20 @@ type InventoryHistoryType {
   name: String!
 }
 
+type InventoryHistory {
+  id: Int!
+  inventoryId: Int!
+  inventory: Inventory!
+  userId: String!
+  user: User!
+  typeId: Int!
+  type: InventoryHistoryType!
+  quantityChange: Int!
+  currentQuantity: Int!
+  memo: String
+  createdAt: DateTime!
+}
+
 type Role {
   id: Int!
   name: String!
@@ -103,7 +118,13 @@ enum RoleRequestStatus {
   REJECTED
 }
 
+type FetchInventoryHistoryOutput {
+  items: [InventoryHistory!]!
+  count: Int!
+}
+
 type Query {
+  fetchInventoryHistories(fetchInventoryHistoryInput: FetchInventoryHistoryInput!): FetchInventoryHistoryOutput!
   fetchUsers: [User!]!
   fetchUserByEmail(email: String!): User
   fetchUsersByStore(storeId: Int!): [User!]!
@@ -112,7 +133,7 @@ type Query {
   fetchRoles: [Role!]!
   fetchRole(name: String!): Role
   fetchStores: [Store!]!
-  fetchStore(storeId: Int!): Store
+  fetchStore(storeId: Int): Store
   fetchTires: [Tire!]!
   fetchTire(id: Int!): Tire
   fetchTireBrands: [TireBrand!]!
@@ -122,6 +143,15 @@ type Query {
   fetchInventories(storeId: Int): [Inventory!]!
   fetchInventory(tireId: Int!, storeId: Int): Inventory
   fetchRoleRequests(status: RoleRequestStatus): [RoleRequest!]!
+}
+
+input FetchInventoryHistoryInput {
+  page: Int! = 1
+  limit: Int! = 10
+  storeId: Int
+  tireId: Int
+  startDate: DateTime
+  endDate: DateTime
 }
 
 type Mutation {
@@ -182,16 +212,16 @@ input UpdateRoleInput {
 input CreateStoreInput {
   name: String!
   address: String!
-  telePhoneNumber: String
-  code: String!
+  businessLicenseUrl: String
 }
 
 input UpdateStoreInput {
   name: String
   address: String
+  businessLicenseUrl: String
+  id: Int!
   telePhoneNumber: String
   code: String
-  id: Int!
 }
 
 input CreateTireInput {

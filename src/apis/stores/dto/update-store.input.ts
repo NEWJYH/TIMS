@@ -1,6 +1,6 @@
 import { InputType, Field, Int, PartialType } from '@nestjs/graphql';
 import { CreateStoreInput } from './create-store.input';
-import { IsInt, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 @InputType()
 export class UpdateStoreInput extends PartialType(CreateStoreInput) {
@@ -8,4 +8,14 @@ export class UpdateStoreInput extends PartialType(CreateStoreInput) {
   @IsInt()
   @Min(1)
   id: number;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  telePhoneNumber?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  code?: string;
 }
