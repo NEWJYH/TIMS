@@ -21,7 +21,7 @@ export class RoleRequestsResolver {
   // =================================================================
 
   // STAFF, ADMIN
-  @Roles(RoleName.ADMIN, RoleName.STAFF)
+  @Roles(RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => [RoleRequest])
   fetchRoleRequests(

@@ -1,23 +1,21 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 @InputType()
 export class StockInInput {
-  @Field(() => Int)
+  @Field(() => Int, { nullable: true })
   @IsInt()
-  storeId: number;
+  @IsOptional()
+  storeId?: number;
 
   @Field(() => Int)
   @IsInt()
+  @Min(1)
   tireId: number;
 
   @Field(() => Int)
   @IsInt()
   quantity: number;
-
-  @Field(() => String)
-  @IsString()
-  userId: string;
 
   @Field(() => String, { nullable: true })
   @IsOptional()
