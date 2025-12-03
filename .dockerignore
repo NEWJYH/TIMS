@@ -4,4 +4,5 @@ dist
 .gitignore
 mysql_data
 redis_data
+seaweed_data
 logs

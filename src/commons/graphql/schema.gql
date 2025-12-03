@@ -123,7 +123,19 @@ type FetchInventoryHistoryOutput {
   count: Int!
 }
 
+type File {
+  id: String!
+  url: String!
+  name: String!
+  mimeType: String!
+  userId: String
+  user: User
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
 type Query {
+  fetchMyFiles(fetchFilesInput: FetchFileInput!): [File!]!
   fetchInventoryHistories(fetchInventoryHistoryInput: FetchInventoryHistoryInput!): FetchInventoryHistoryOutput!
   fetchUsers: [User!]!
   fetchUserByEmail(email: String!): User
@@ -145,6 +157,11 @@ type Query {
   fetchRoleRequests(status: RoleRequestStatus): [RoleRequest!]!
 }
 
+input FetchFileInput {
+  page: Int! = 1
+  limit: Int! = 10
+}
+
 input FetchInventoryHistoryInput {
   page: Int! = 1
   limit: Int! = 10
@@ -155,6 +172,7 @@ input FetchInventoryHistoryInput {
 }
 
 type Mutation {
+  uploadFile(file: Upload!): String!
   deleteUser(userId: String!): Boolean!
   createUser(createUserInput: CreateUserInput!): User!
   updateUser(updateUserInput: UpdateUserInput!): User!
@@ -181,6 +199,9 @@ type Mutation {
   restoreAcessToken: String!
   logout: String!
 }
+
+"""The `Upload` scalar type represents a file upload."""
+scalar Upload
 
 input CreateUserInput {
   email: String!

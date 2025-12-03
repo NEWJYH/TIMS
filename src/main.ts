@@ -5,18 +5,25 @@ import { winstonLogger } from './utils/winston.config';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import * as morgan from 'morgan';
 import { LoggingInterceptor } from './commons/interceptors/logging.interceptor';
+import { Request, Response } from 'express';
+
+import { graphqlUploadExpress } from 'graphql-upload-ts';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: winstonLogger,
   });
+  // favicon 무시
+  app.use('/favicon.ico', (req: Request, res: Response) =>
+    res.status(204).end(),
+  );
 
   // Morgan 커스텀 토큰 정의 (req.user는 Guard가 통과된 후에만 존재함)
-  morgan.token('user', (req: any) => {
+  morgan.token('user', (req: Request & { user?: { id: string } }) => {
     return req.user ? req.user.id : 'Guest';
   });
 
-  // 3. 'combined' 대신 커스텀 포맷 사용
+  // 'combined' 대신 커스텀 포맷 사용
   const morganFormat =
     ':remote-addr - :user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"';
 
@@ -30,9 +37,10 @@ async function bootstrap() {
       },
     }),
   );
-  app.useGlobalInterceptors(new LoggingInterceptor());
 
+  app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.use(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }));
 
   // CORS 설정 (쿠키 인증을 위해 credentials 필수)
   app.enableCors({

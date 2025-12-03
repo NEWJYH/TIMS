@@ -12,10 +12,12 @@ import { AuthModule } from './apis/auth/auth.module';
 import { Request, Response } from 'express';
 import { ConfigModule } from '@nestjs/config';
 import { InventoryHistoriesModule } from './apis/inventoryHistories/inventoryHistories.module';
+import { FilesModule } from './apis/files/files.module';
 // import * as Joi from 'joi';
 
 @Module({
   imports: [
+    FilesModule,
     InventoryHistoriesModule,
     UsersModule, //
     RolesModule,
