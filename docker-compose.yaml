@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  # 1. MySQL 데이터베이스 (8.0 버전)
+  # MySQL 데이터베이스 (8.0 버전)
   my-database:
     image: mysql:8.0
     platform: linux/x86_64
@@ -12,8 +10,8 @@ services:
     env_file:
       - .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD} # 루트 비밀번호 (개발용)
-      MYSQL_DATABASE: ${DATABASE_DATABASE} # 생성할 데이터베이스 이름
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_DATABASE}
       MYSQL_USER: ${DATABASE_USERNAME}
       MYSQL_PASSWORD: ${DATABASE_PASSWORD}
     command:
@@ -22,7 +20,8 @@ services:
       --collation-server=utf8mb4_unicode_ci
     volumes:
       - ./mysql_data:/var/lib/mysql # DB 데이터를 로컬 폴더에 저장 (삭제 방지)
-  # 2. Redis (메모리 캐시)
+
+  # Redis : 변경 예정 valkey
   my-redis:
     image: redis:alpine
     container_name: tire-app-redis
@@ -30,7 +29,21 @@ services:
     ports:
       - '6379:6379'
     volumes:
-      - ./redis_data:/data # Redis 데이터 영구 저장용
+      - ./redis_data:/data
+
+  # S3 호환 스토리지
+  my-seaweedfs:
+    image: chrislusf/seaweedfs
+    container_name: tire-app-seaweedfs
+    restart: always
+    ports:
+      - '9333:9333' # Master Server (관리용)
+      - '8333:8333' # Volume Server (S3 API용)
+      - '8888:8888' # Filer (UI)
+    command: "server -s3 -filer -dir=/data" # S3 API 활성화 및 데이터 경로 지정
+    volumes:
+      - ./seaweed_data:/data # 로컬에 파일 저장
+      - ./security.json:/etc/seaweedfs/security.json
 
   my-backend:
     build:
@@ -45,8 +58,10 @@ services:
     depends_on:
       - my-database
       - my-redis
+      - my-seaweedfs
     env_file:
       - .env
     environment:
       DB_HOST: my-database
       REDIS_HOST: my-redis
+      S3_ENDPOINT: http://my-seaweedfs:8333
