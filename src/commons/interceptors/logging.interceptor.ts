@@ -6,8 +6,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { Observable, tap, throwError } from 'rxjs'; // 👈 throwError import
-import { catchError } from 'rxjs/operators'; // 👈 catchError import
+import { GraphQLResolveInfo } from 'graphql';
+import { Observable, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
+import { IContext } from '../interfaces/context';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -15,16 +17,15 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = GqlExecutionContext.create(context);
-    const info = ctx.getInfo();
-    const req = ctx.getContext().req;
-
+    const info = ctx.getInfo<GraphQLResolveInfo>();
+    const req = ctx.getContext<IContext>().req;
     const fieldName = info.fieldName;
     const user = req.user ? req.user.id : 'Guest';
     const ip = req.ip;
     const now = Date.now();
 
     return next.handle().pipe(
-      // 1. 성공 시 로그 (기존 tap)
+      // 성공 시 로그
       tap(() => {
         const duration = Date.now() - now;
         this.logger.log(
@@ -32,16 +33,15 @@ export class LoggingInterceptor implements NestInterceptor {
         );
       }),
 
-      // 실패 시 로그 기록 및 에러 재전파
-      catchError((err) => {
+      // 실패 시 로그 : 중복 방지를 위해 가볍게 변경
+      catchError((err: unknown) => {
         const duration = Date.now() - now;
-        // 실패 로그는 error 레벨로 찍고, 에러 내용을 포함
-        this.logger.error(
-          `[GraphQL] ${fieldName} | User: ${user} | FAILED in ${duration}ms | Reason: ${err.message}`,
-          err.stack, // 스택 트레이스도 같이 기록
+        const errMsg = err instanceof Error ? err.message : String(err);
+        this.logger.warn(
+          `[GraphQL] ${fieldName} | User: ${user} | IP: ${ip} | FAILED in ${duration}ms | ${errMsg}`,
         );
-        // 잡은 에러를 다시 던져서 Exception Filter로
-        return throwError(() => err);
+
+        return throwError(() => err); // 에러 Filter로 토스
       }),
     );
   }

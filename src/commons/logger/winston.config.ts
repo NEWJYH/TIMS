@@ -3,7 +3,7 @@ import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 
 const env = process.env.NODE_ENV;
-const logDir = __dirname + '/../../logs';
+const logDir = process.cwd() + '/logs';
 
 // 로그 파일 설정 (날짜별로 파일 분리)
 const dailyOptions = (level: string) => {
@@ -28,7 +28,7 @@ export const winstonLogger = WinstonModule.createLogger({
           ? winston.format.simple()
           : winston.format.combine(
               winston.format.timestamp(),
-              utilities.format.nestLike('MyApp', {
+              utilities.format.nestLike('TIMS', {
                 prettyPrint: true, // 로그를 예쁘게 출력
                 colors: true, // 색상 적용
               }),
