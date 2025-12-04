@@ -135,8 +135,6 @@ type File {
 }
 
 type Query {
-  fetchMyFiles(fetchFilesInput: FetchFileInput!): [File!]!
-  fetchInventoryHistories(fetchInventoryHistoryInput: FetchInventoryHistoryInput!): FetchInventoryHistoryOutput!
   fetchUsers: [User!]!
   fetchUserByEmail(email: String!): User
   fetchUsersByStore(storeId: Int!): [User!]!
@@ -146,14 +144,16 @@ type Query {
   fetchRole(name: String!): Role
   fetchStores: [Store!]!
   fetchStore(storeId: Int): Store
+  fetchMyFiles(fetchFilesInput: FetchFileInput!): [File!]!
+  fetchInventories(storeId: Int): [Inventory!]!
+  fetchInventory(tireId: Int!, storeId: Int): Inventory
   fetchTires: [Tire!]!
   fetchTire(id: Int!): Tire
   fetchTireBrands: [TireBrand!]!
   fetchTireBrand(tireBrandId: Float!): TireBrand!
   fetchTireCategory(tireCategoryId: Int!): TireCategory!
   fetchTireCategories: [TireCategory!]!
-  fetchInventories(storeId: Int): [Inventory!]!
-  fetchInventory(tireId: Int!, storeId: Int): Inventory
+  fetchInventoryHistories(fetchInventoryHistoryInput: FetchInventoryHistoryInput!): FetchInventoryHistoryOutput!
   fetchRoleRequests(status: RoleRequestStatus): [RoleRequest!]!
 }
 
@@ -172,7 +172,9 @@ input FetchInventoryHistoryInput {
 }
 
 type Mutation {
-  uploadFile(file: Upload!): String!
+  login(email: String!, password: String!): String!
+  restoreAcessToken: String!
+  logout: String!
   deleteUser(userId: String!): Boolean!
   createUser(createUserInput: CreateUserInput!): User!
   updateUser(updateUserInput: UpdateUserInput!): User!
@@ -183,6 +185,10 @@ type Mutation {
   createStore(createStoreInput: CreateStoreInput!): Store!
   updateStore(updateStoreInput: UpdateStoreInput!): Store!
   deleteStore(storeId: Int!): Boolean!
+  uploadFile(file: Upload!): String!
+  stockIn(stockInInput: StockInInput!): Inventory!
+  stockOut(stockOutInput: StockOutInput!): Inventory!
+  stockAdjust(stockAdjustInput: StockAdjustInput!): Inventory!
   createTire(createTireInput: CreateTireInput!): Tire!
   updateTire(updateTireInput: UpdateTireInput!): Tire!
   deleteTire(id: Int!): Boolean!
@@ -190,18 +196,9 @@ type Mutation {
   updateTireBrand(updateTireBrandInput: UpdateTireBrandInput!): TireBrand!
   createTireCategory(createTireCategoryInput: CreateTireCategoryInput!): TireCategory!
   updateTireCategory(updateTireCategoryInput: UpdateTireCategoryInput!): TireCategory!
-  stockIn(stockInInput: StockInInput!): Inventory!
-  stockOut(stockOutInput: StockOutInput!): Inventory!
-  stockAdjust(stockAdjustInput: StockAdjustInput!): Inventory!
   processRoleRequest(processRoleRequestInput: ProcessRoleRequestInput!): RoleRequest!
   requestRoleChange(createRoleRequestInput: CreateRoleRequestInput!): RoleRequest!
-  login(email: String!, password: String!): String!
-  restoreAcessToken: String!
-  logout: String!
 }
-
-"""The `Upload` scalar type represents a file upload."""
-scalar Upload
 
 input CreateUserInput {
   email: String!
@@ -256,6 +253,30 @@ input UpdateStoreInput {
   code: String
 }
 
+"""The `Upload` scalar type represents a file upload."""
+scalar Upload
+
+input StockInInput {
+  storeId: Int
+  tireId: Int!
+  quantity: Int!
+  memo: String
+}
+
+input StockOutInput {
+  storeId: Int
+  tireId: Int!
+  quantity: Int!
+  memo: String
+}
+
+input StockAdjustInput {
+  storeId: Int
+  tireId: Int!
+  quantity: Int!
+  memo: String
+}
+
 input CreateTireInput {
   brandId: Int!
   name: String!
@@ -293,27 +314,6 @@ input CreateTireCategoryInput {
 input UpdateTireCategoryInput {
   name: String
   id: Int!
-}
-
-input StockInInput {
-  storeId: Int
-  tireId: Int!
-  quantity: Int!
-  memo: String
-}
-
-input StockOutInput {
-  storeId: Int
-  tireId: Int!
-  quantity: Int!
-  memo: String
-}
-
-input StockAdjustInput {
-  storeId: Int
-  tireId: Int!
-  quantity: Int!
-  memo: String
 }
 
 input ProcessRoleRequestInput {

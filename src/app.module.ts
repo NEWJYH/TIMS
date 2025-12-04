@@ -13,38 +13,33 @@ import { Request, Response } from 'express';
 import { ConfigModule } from '@nestjs/config';
 import { InventoryHistoriesModule } from './apis/inventoryHistories/inventoryHistories.module';
 import { FilesModule } from './apis/files/files.module';
-// import * as Joi from 'joi';
+import { gqlFormatError } from './commons/graphql/format-error';
+import { createGqlContext } from './commons/graphql/context';
 
 @Module({
   imports: [
+    AuthModule, //
     FilesModule,
+    InventoriesModule,
     InventoryHistoriesModule,
-    UsersModule, //
     RolesModule,
+    RoleRequestsModule,
     StoresModule,
     TiresModule,
-    InventoriesModule,
-    RoleRequestsModule,
-    AuthModule,
+    UsersModule,
+    // config
     ConfigModule.forRoot({
-      isGlobal: true, // 전역 모듈로 설정 (어디서든 ConfigService 사용 가능)
-      // validationSchema: Joi.object({
-      //   // 필수 환경변수 정의 (없으면 서버 실행 안 됨!)
-      //   JWT_ACCESS_TOKEN_SECRET: Joi.string().required(),
-      //   JWT_REFRESH_TOKEN_SECRET: Joi.string().required(),
-      //   JWT_ACCESS_TOKEN_EXPIRATION_TIME: Joi.string().default('1h'),
-      //   JWT_REFRESH_TOKEN_EXPIRATION_TIME: Joi.string().default('2w'),
-      // }),
+      isGlobal: true,
     }),
     // graphql setting
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: 'src/commons/graphql/schema.gql',
-      context: ({ req, res }: { req: Request; res: Response }) => ({
-        req,
-        res,
-      }),
+      formatError: gqlFormatError,
+      context: createGqlContext,
+      playground: true,
     }),
+    // typeorm setting
     TypeOrmModule.forRoot({
       type: process.env.DATABASE_TYPE as 'mysql',
       host: process.env.DATABASE_HOST,
