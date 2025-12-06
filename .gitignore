@@ -10,6 +10,8 @@
 /mysql_data
 /redis_data
 /seaweed_data
+/grafana_data
+/prometheus_data
 
 security.json
 
