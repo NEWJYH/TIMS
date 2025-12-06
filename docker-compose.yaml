@@ -1,9 +1,9 @@
 services:
-  # MySQL 데이터베이스 (8.0 버전)
+  # mariaDB
   my-database:
     image: mariadb:10.11
     platform: linux/x86_64
-    container_name: tire-app-mysql
+    container_name: tire-app-mariadb
     restart: always
     ports:
       - '3306:3306' # 로컬:컨테이너 포트 매핑
@@ -20,7 +20,6 @@ services:
       --collation-server=utf8mb4_unicode_ci
     volumes:
       - ./mysql_data:/var/lib/mysql # DB 데이터를 로컬 폴더에 저장 (삭제 방지)
-
   # Redis : 변경 예정 valkey
   my-redis:
     image: redis:alpine
@@ -30,7 +29,6 @@ services:
       - '6379:6379'
     volumes:
       - ./redis_data:/data
-
   # S3 호환 스토리지
   my-seaweedfs:
     image: chrislusf/seaweedfs
@@ -40,11 +38,11 @@ services:
       - '9333:9333' # Master Server (관리용)
       - '8333:8333' # Volume Server (S3 API용)
       - '8888:8888' # Filer (UI)
-    command: "server -s3 -filer -dir=/data" # S3 API 활성화 및 데이터 경로 지정
+    command: 'server -s3 -filer -dir=/data' # S3 API 활성화 및 데이터 경로 지정
     volumes:
       - ./seaweed_data:/data # 로컬에 파일 저장
       - ./security.json:/etc/seaweedfs/security.json
-
+  # backend
   my-backend:
     build:
       context: .
@@ -65,3 +63,69 @@ services:
       DB_HOST: my-database
       REDIS_HOST: my-redis
       S3_ENDPOINT: http://my-seaweedfs:8333
+  #prometheus
+  my-prometheus:
+    image: prom/prometheus:latest
+    container_name: tire-app-prometheus
+    restart: always
+    ports:
+      - '9090:9090' # 웹 UI 포트
+    volumes:
+      # 설정 파일 연결
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      # 수집한 데이터 영구 저장
+      - ./prometheus_data:/prometheus
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d' # 15일 저장
+  # grafana
+  my-grafana:
+    image: grafana/grafana:latest
+    container_name: tire-app-grafana
+    restart: always
+    ports:
+      - '3001:3000' # 로컬 3001번으로 접속
+    env_file:
+      - .env
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD} # 초기 비번 설정
+    volumes:
+      - ./grafana_data:/var/lib/grafana # 대시보드 설정 저장
+    depends_on:
+      - my-prometheus
+  # node-exporter
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - 9100:9100
+# glance
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    restart: always
+    pid: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./glances.conf:/etc/glances/glances.conf
+    environment:
+      - "GLANCES_OPT=-q --export prometheus --time 10 -C /etc/glances/glances.conf"
+      # - 'GLANCES_PROMETHEUS_HOST=0.0.0.0'
+      # - 'GLANCES_PROMETHEUS_PORT=9091'
+    ports:
+      - '9091:9091'

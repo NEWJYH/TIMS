@@ -9,12 +9,18 @@ import { TiresModule } from './apis/tires/tires.module';
 import { InventoriesModule } from './apis/inventories/inventories.module';
 import { RoleRequestsModule } from './apis/roleRequests/roleRequests.module';
 import { AuthModule } from './apis/auth/auth.module';
-import { Request, Response } from 'express';
 import { ConfigModule } from '@nestjs/config';
 import { InventoryHistoriesModule } from './apis/inventoryHistories/inventoryHistories.module';
 import { FilesModule } from './apis/files/files.module';
 import { gqlFormatError } from './commons/graphql/format-error';
 import { createGqlContext } from './commons/graphql/context';
+import {
+  makeCounterProvider,
+  PrometheusModule,
+} from '@willsoto/nestjs-prometheus';
+import { MetricsController } from './metrics.controller';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ApiMetricsInterceptor } from './commons/interceptors/api-metrics.interceptor';
 
 @Module({
   imports: [
@@ -51,6 +57,27 @@ import { createGqlContext } from './commons/graphql/context';
       synchronize: true,
       logging: true,
     }),
+    // Prometheuse setting
+    PrometheusModule.register({
+      path: '/metrics',
+      defaultMetrics: {
+        enabled: true,
+      },
+    }),
   ],
+  providers: [
+    //  카운터(계수기) 정의
+    makeCounterProvider({
+      name: 'api_requests_total',
+      help: 'Total number of API requests (GraphQL & REST)',
+      labelNames: ['type', 'action', 'status'],
+    }),
+    // 인터셉터 등록
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ApiMetricsInterceptor,
+    },
+  ],
+  controllers: [MetricsController],
 })
 export class AppModule {}

@@ -12,6 +12,14 @@ const morganFormat =
   ':remote-addr - :user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"';
 
 export const morganLogging = morgan(morganFormat, {
+  skip: (req: Request) => {
+    // /metrics, /health, /favicon.ico 는 로그 안 남김
+    return (
+      req.originalUrl?.includes('/metrics') ||
+      req.originalUrl?.includes('/health') ||
+      req.originalUrl?.includes('/favicon.ico')
+    );
+  },
   stream: {
     write: (message: string) => {
       // Winston을 통해 로그 기록 (Context: 'Morgan')

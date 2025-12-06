@@ -1,12 +1,13 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { CustomHttpExceptionFilter } from './commons/filters/custom-exception.filter';
-import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { LoggingInterceptor } from './commons/interceptors/logging.interceptor';
 import { Request, Response } from 'express';
 import { graphqlUploadExpress } from 'graphql-upload-ts';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { morganLogging } from './middleware/logger.middleware';
+import { IgnoreMetricsClassSerializerInterceptor } from './commons/interceptors/ignore-metrics.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -22,8 +23,10 @@ async function bootstrap() {
   app.use(morganLogging);
   // Interceptor : 로깅 인터셉터 : GraphQL 요청의 시작/끝 시간 및 성공 여부 기록
   app.useGlobalInterceptors(new LoggingInterceptor());
-  // Interceptor : 직렬화 인터셉터 : 엔티티 적용 필수
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  // // Interceptor : 직렬화 인터셉터 : 엔티티 적용 필수
+  app.useGlobalInterceptors(
+    new IgnoreMetricsClassSerializerInterceptor(app.get(Reflector)),
+  );
   // CORS : 프론트엔드와 통신 허용
   app.enableCors({
     origin: true, // 프론트엔드 주소에 맞춰 설정 (개발 중엔 true)
