@@ -3,8 +3,11 @@
 /node_modules
 /build
 
+#bin data
+/myBin
+
 # init data
-/src/database/seeds
+/src/commons/database/seeds
 
 # Docker Data
 /mysql_data
@@ -12,7 +15,6 @@
 /seaweed_data
 /grafana_data
 /prometheus_data
-
 security.json
 
 # test data db

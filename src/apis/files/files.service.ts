@@ -33,9 +33,7 @@ export class FilesService implements OnModuleInit {
         accessKeyId: process.env.S3_ACCESS_KEY as string,
         secretAccessKey: process.env.S3_SECRET_KEY as string,
       },
-      // 🚀 [수정] 환경변수 없으면 로컬 주소 사용 (Fallback)
-      // endpoint: process.env.S3_ENDPOINT || 'http://localhost:8333',
-      endpoint: 'http://localhost:8333',
+      endpoint: process.env.S3_ENDPOINT,
       forcePathStyle: true,
     });
   }

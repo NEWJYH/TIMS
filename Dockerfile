@@ -14,5 +14,5 @@ RUN yarn install
 COPY . .
 
 # 5. 실행
-RUN yarn seed
+# RUN yarn seed
 CMD ["yarn", "start:dev"]

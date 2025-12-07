@@ -118,11 +118,6 @@ enum RoleRequestStatus {
   REJECTED
 }
 
-type FetchInventoryHistoryOutput {
-  items: [InventoryHistory!]!
-  count: Int!
-}
-
 type File {
   id: String!
   url: String!
@@ -132,6 +127,11 @@ type File {
   user: User
   createdAt: DateTime!
   updatedAt: DateTime!
+}
+
+type FetchInventoryHistoryOutput {
+  items: [InventoryHistory!]!
+  count: Int!
 }
 
 type Query {

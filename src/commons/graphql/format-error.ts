@@ -5,11 +5,15 @@ export const gqlFormatError = (error: GraphQLError): GraphQLError => {
   const code = error.extensions?.code as string;
 
   if (code === 'GRAPHQL_VALIDATION_FAILED' || code === 'GRAPHQL_PARSE_FAILED') {
-    winstonLogger.warn(`[GraphQL Validation] ${error.message}`, {
+    const errorDetails = {
       path: error.path,
       locations: error.locations,
       code,
-    });
+    };
+
+    winstonLogger.warn(
+      `[GraphQL Validation] ${error.message} - ${JSON.stringify(errorDetails)}`,
+    );
   }
 
   return error;

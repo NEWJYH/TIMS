@@ -1,7 +1,6 @@
 import * as morgan from 'morgan';
 import { Request } from 'express';
 import { winstonLogger } from 'src/commons/logger/winston.config';
-// import { winstonLogger } from '../commons/logger/winston.logger';
 
 // Morgan 토큰 : 로그인한 유저라면 ID를, 아니면 Guest로 로그 남김
 morgan.token('user', (req: Request & { user?: { id: string } }) => {
@@ -22,8 +21,7 @@ export const morganLogging = morgan(morganFormat, {
   },
   stream: {
     write: (message: string) => {
-      // Winston을 통해 로그 기록 (Context: 'Morgan')
-      winstonLogger.log(message.replace('\n', ''), 'Morgan');
+      winstonLogger.log(message.replace('\n', ''));
     },
   },
 });

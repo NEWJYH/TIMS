@@ -8,6 +8,33 @@ import {
 } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { AxiosError } from 'axios';
+import { GqlArgumentsHost } from '@nestjs/graphql';
+import { Request } from 'express';
+import { IContext } from '../interfaces/context';
+
+// 1. 응답 객체의 구조를 정의 (HttpException response)
+interface IErrorResponse {
+  message?: string | string[];
+  error?: string;
+  statusCode?: number;
+}
+
+// 2. 알 수 없는 에러 객체가 status와 message를 가졌는지 확인하는 타입 가드
+interface IClientError {
+  status: number;
+  message: string;
+}
+
+const isClientErrorObject = (err: unknown): err is IClientError => {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'status' in err &&
+    'message' in err &&
+    typeof (err as Record<string, unknown>).status === 'number' &&
+    typeof (err as Record<string, unknown>).message === 'string'
+  );
+};
 
 const mapHttpStatusToGqlCode = (status: number): string => {
   if (status >= 400 && status < 500) return 'BAD_USER_INPUT';
@@ -18,68 +45,92 @@ const mapHttpStatusToGqlCode = (status: number): string => {
 @Catch()
 export class CustomHttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(CustomHttpExceptionFilter.name);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  catch(exception: unknown, _host: ArgumentsHost) {
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+
+  catch(exception: unknown, host: ArgumentsHost) {
+    // 유저 정보 추출
+    let userLog = '';
+    const contextType = host.getType();
+
+    if (contextType === 'http') {
+      const ctx = host.switchToHttp();
+      const req = ctx.getRequest<Request>();
+      // req.user가 존재하고 id가 있는지 안전하게 확인
+      const user = req.user as Record<string, any> | undefined;
+      if (user && user.id) userLog = `[User: ${String(user.id)}]`;
+    } else if ((contextType as string) === 'graphql') {
+      const gqlHost = GqlArgumentsHost.create(host);
+      const ctx = gqlHost.getContext<IContext>();
+      // ctx.req.user 타입 안전하게 접근
+      const user = ctx.req?.user as Record<string, any> | undefined;
+      if (user && user.id) userLog = `[User: ${String(user.id)}]`;
+    }
+
+    let status: number = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = '요청 처리 중 예기치 않은 오류가 발생했습니다.';
     let code = 'INTERNAL_SERVER_ERROR';
 
-    // 스택 트레이스를 찍을지 여부
-    let logStack = true;
-
-    // NestJS HTTP 예외 처리 (400, 401, 403, 404, 409 ...)
+    // NestJS HTTP 예외
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const response = exception.getResponse();
-      if (
-        typeof response === 'object' &&
-        response !== null &&
-        'message' in response
-      ) {
-        message = (response as any).message;
+
+      // 응답이 객체인지 문자열인지 확인하여 처리
+      if (typeof response === 'object' && response !== null) {
+        // IErrorResponse 인터페이스로 단언하여 접근
+        const errorObj = response as IErrorResponse;
+        if (Array.isArray(errorObj.message)) {
+          message = errorObj.message.join(', ');
+        } else if (typeof errorObj.message === 'string') {
+          message = errorObj.message;
+        }
       } else if (typeof response === 'string') {
         message = response;
-      } else {
-        message = exception.message;
       }
 
       code = mapHttpStatusToGqlCode(status);
 
-      // 400번대 에러는 WARN
       if (status >= 400 && status < 500) {
-        logStack = false;
-        this.logger.warn(`[HttpException] ${status} - ${message}`);
+        this.logger.warn(`[HttpException] ${status} - ${message} - ${userLog}`);
       } else {
-        this.logger.error(`[HttpException] ${status} - ${message}`);
+        this.logger.error(
+          `[HttpException] ${status} - ${message} - ${userLog}`,
+        );
       }
     }
-    // Axios 예외 처리
+    // Axios 예외
     else if (exception instanceof AxiosError && exception.response) {
       status = exception.response.status;
-      const data = exception.response.data as any;
+      // Axios 응답 데이터 타입을 명시 (unknown -> { message: string })
+      const data = exception.response.data as { message?: string } | undefined;
       message = data?.message || exception.message;
       code = mapHttpStatusToGqlCode(status);
 
-      // 외부 API 에러
-      this.logger.error(`[AxiosError] ${status} - ${message}`);
+      this.logger.error(`[AxiosError] ${status} - ${message} - ${userLog}`);
     }
-    // 알 수 없는 시스템 에러 (500)
+    // 기타 예외
     else {
-      const exAny = exception as any;
-      const isClientError =
-        exAny.status && exAny.status >= 400 && exAny.status < 500;
-
-      if (isClientError) {
-        // 라이브러리에서 발생한 400번대 에러
-        logStack = false;
-        status = exAny.status;
-        message = exAny.message;
+      // isClientErrorObject 타입 가드
+      if (
+        isClientErrorObject(exception) &&
+        exception.status >= 400 &&
+        exception.status < 500
+      ) {
+        // 400번대 에러 (Client Error)
+        status = exception.status;
+        message = exception.message;
         code = mapHttpStatusToGqlCode(status);
-        this.logger.warn(`[Client Error] ${status} - ${message}`);
+        this.logger.warn(`[Client Error] ${status} - ${message} - ${userLog}`);
       } else {
-        // 500 에러 (DB 연결 끊김, Null Pointer 등)
+        // 진짜 500 에러 (Unknown)
         const errorStack = exception instanceof Error ? exception.stack : '';
-        this.logger.error(`[Unknown Error] ${exception}`, errorStack);
+        // 템플릿 리터럴 내 unknown 타입 에러 해결 -> String() 변환
+        const errorMsg =
+          exception instanceof Error ? exception.message : String(exception);
+
+        this.logger.error(
+          `[Unknown Error] ${errorMsg} - ${userLog}`,
+          errorStack,
+        );
 
         status = HttpStatus.INTERNAL_SERVER_ERROR;
         message =
