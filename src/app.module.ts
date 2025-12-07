@@ -1,30 +1,23 @@
 import { Module } from '@nestjs/common';
+import { CoreModule } from './commons/core/core.module'; // CoreModule 임포트
+
+// 비즈니스 모듈들
 import { UsersModule } from './apis/users/users.module';
-import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { RolesModule } from './apis/roles/roles.module';
 import { StoresModule } from './apis/stores/stores.module';
 import { TiresModule } from './apis/tires/tires.module';
 import { InventoriesModule } from './apis/inventories/inventories.module';
 import { RoleRequestsModule } from './apis/roleRequests/roleRequests.module';
 import { AuthModule } from './apis/auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
-import { InventoryHistoriesModule } from './apis/inventoryHistories/inventoryHistories.module';
 import { FilesModule } from './apis/files/files.module';
-import { gqlFormatError } from './commons/graphql/format-error';
-import { createGqlContext } from './commons/graphql/context';
-import {
-  makeCounterProvider,
-  PrometheusModule,
-} from '@willsoto/nestjs-prometheus';
-import { MetricsController } from './metrics.controller';
-import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ApiMetricsInterceptor } from './commons/interceptors/api-metrics.interceptor';
+import { InventoryHistoriesModule } from './apis/inventoryHistories/inventoryHistories.module';
 
 @Module({
   imports: [
-    AuthModule, //
+    CoreModule, // 모든 설정
+
+    // 비즈니스 로직
+    AuthModule,
     FilesModule,
     InventoriesModule,
     InventoryHistoriesModule,
@@ -33,51 +26,6 @@ import { ApiMetricsInterceptor } from './commons/interceptors/api-metrics.interc
     StoresModule,
     TiresModule,
     UsersModule,
-    // config
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    // graphql setting
-    GraphQLModule.forRoot<ApolloDriverConfig>({
-      driver: ApolloDriver,
-      autoSchemaFile: 'src/commons/graphql/schema.gql',
-      formatError: gqlFormatError,
-      context: createGqlContext,
-      playground: true,
-    }),
-    // typeorm setting
-    TypeOrmModule.forRoot({
-      type: process.env.DATABASE_TYPE as 'mysql',
-      host: process.env.DATABASE_HOST,
-      port: Number(process.env.DATABASE_PORT),
-      username: process.env.DATABASE_USERNAME,
-      password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_DATABASE,
-      entities: [__dirname + '/apis/**/*.entity.*'],
-      synchronize: true,
-      logging: true,
-    }),
-    // Prometheuse setting
-    PrometheusModule.register({
-      path: '/metrics',
-      defaultMetrics: {
-        enabled: true,
-      },
-    }),
   ],
-  providers: [
-    //  카운터(계수기) 정의
-    makeCounterProvider({
-      name: 'api_requests_total',
-      help: 'Total number of API requests (GraphQL & REST)',
-      labelNames: ['type', 'action', 'status'],
-    }),
-    // 인터셉터 등록
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ApiMetricsInterceptor,
-    },
-  ],
-  controllers: [MetricsController],
 })
 export class AppModule {}

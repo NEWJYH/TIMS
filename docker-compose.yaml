@@ -2,8 +2,8 @@ services:
   # mariaDB
   my-database:
     image: mariadb:10.11
-    platform: linux/x86_64
-    container_name: tire-app-mariadb
+    platform: linux/x86_64 # 배포환경에서는 주석처리
+    container_name: tire-app-mariadb  
     restart: always
     ports:
       - '3306:3306' # 로컬:컨테이너 포트 매핑
@@ -55,17 +55,16 @@ services:
       - /workspace/node_modules
     depends_on:
       - my-database
-      - my-redis
+      # - my-redis
       - my-seaweedfs
     env_file:
-      - .env
+      - .env.docker
     environment:
-      DB_HOST: my-database
-      REDIS_HOST: my-redis
-      S3_ENDPOINT: http://my-seaweedfs:8333
+      - NODE_ENV=production
   #prometheus
   my-prometheus:
     image: prom/prometheus:latest
+    user: root
     container_name: tire-app-prometheus
     restart: always
     ports:
@@ -86,6 +85,7 @@ services:
   # grafana
   my-grafana:
     image: grafana/grafana:latest
+    user: root
     container_name: tire-app-grafana
     restart: always
     ports:
@@ -125,7 +125,5 @@ services:
       - ./glances.conf:/etc/glances/glances.conf
     environment:
       - "GLANCES_OPT=-q --export prometheus --time 10 -C /etc/glances/glances.conf"
-      # - 'GLANCES_PROMETHEUS_HOST=0.0.0.0'
-      # - 'GLANCES_PROMETHEUS_PORT=9091'
     ports:
       - '9091:9091'
