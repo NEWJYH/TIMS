@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators'; // RxJS 연산자 추가
+import { catchError, tap } from 'rxjs/operators';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
 import { GraphQLResolveInfo } from 'graphql';
@@ -16,7 +16,6 @@ import { Request, Response } from 'express';
 @Injectable()
 export class ApiMetricsInterceptor implements NestInterceptor {
   constructor(
-    // 중요: 모듈 등록 시 labelNames에 ['type', 'action', 'status'] 3개가 있어야 함
     @InjectMetric('api_requests_total') public counter: Counter<string>,
     @InjectMetric('api_request_duration_seconds')
     public histogram: Histogram<string>,

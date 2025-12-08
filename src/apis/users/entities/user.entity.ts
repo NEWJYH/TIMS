@@ -1,5 +1,6 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { Exclude } from 'class-transformer';
+import { RefreshToken } from 'src/apis/auth/entities/refreshToken.entity';
 import { InventoryHistory } from 'src/apis/inventoryHistories/entities/inventoryHistory.entity';
 import { Role } from 'src/apis/roles/entities/role.entity';
 import { Store } from 'src/apis/stores/entities/store.entity';
@@ -89,6 +90,9 @@ export class User {
   // @Field(() => [InventoryHistory], { nullable: true })
   @OneToMany(() => InventoryHistory, (history) => history.user)
   histories: InventoryHistory[];
+
+  @OneToMany(() => RefreshToken, (refreshToken) => refreshToken.user)
+  refreshTokens: RefreshToken[];
 
   @CreateDateColumn({ name: 'created_at', comment: '가입일' })
   @Field(() => Date)

@@ -118,6 +118,15 @@ enum RoleRequestStatus {
   REJECTED
 }
 
+type LoginResponse {
+  accessToken: String!
+  refreshToken: String!
+}
+
+type RestoreAccessTokenAppResponse {
+  accessToken: String!
+}
+
 type File {
   id: String!
   url: String!
@@ -172,9 +181,11 @@ input FetchInventoryHistoryInput {
 }
 
 type Mutation {
+  loginGoogleApp(googleLoginInput: GoogleLoginInput!): LoginResponse!
   login(email: String!, password: String!): String!
   restoreAcessToken: String!
-  logout: String!
+  restoreAccessTokenApp(refreshToken: String!): RestoreAccessTokenAppResponse!
+  logout(refreshToken: String): String!
   deleteUser(userId: String!): Boolean!
   createUser(createUserInput: CreateUserInput!): User!
   updateUser(updateUserInput: UpdateUserInput!): User!
@@ -198,6 +209,12 @@ type Mutation {
   updateTireCategory(updateTireCategoryInput: UpdateTireCategoryInput!): TireCategory!
   processRoleRequest(processRoleRequestInput: ProcessRoleRequestInput!): RoleRequest!
   requestRoleChange(createRoleRequestInput: CreateRoleRequestInput!): RoleRequest!
+}
+
+input GoogleLoginInput {
+  token: String!
+  device: String!
+  issuedIp: String!
 }
 
 input CreateUserInput {

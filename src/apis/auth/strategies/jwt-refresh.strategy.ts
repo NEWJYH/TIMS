@@ -1,36 +1,3 @@
-// import { PassportStrategy } from '@nestjs/passport';
-// import { Strategy } from 'passport-jwt';
-// import { Request } from 'express';
-// import { IPayload } from './jwt-strategy';
-
-// export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'refresh') {
-//   constructor() {
-//     super({
-//       jwtFromRequest: (req: Request) => {
-//         console.log(req);
-//         const cookie = req.headers.cookie;
-//         if (!cookie) return null;
-//         if (cookie.includes('refreshToken='))
-//           return cookie.replace('refreshToken=', '');
-
-//         return null;
-//       },
-//       secretOrKey: process.env.JWT_REFRESH_TOKEN_SECRET as string,
-//     });
-//   }
-
-//   validate(payload: IPayload) {
-//     console.log('refresh payload test');
-//     console.log(payload);
-//     console.log('refresh payload test');
-
-//     return {
-//       id: payload.sub,
-//       role: payload.role,
-//     };
-//   }
-// }
-
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-jwt';
