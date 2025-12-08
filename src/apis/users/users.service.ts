@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { User } from './entities/user.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -238,11 +239,19 @@ export class UsersService {
 
   // OAuth 회원 가입으로 생성
   async createOAuthUser({ email }: IUserServiceCreateOAuth): Promise<User> {
+    // 회원 유무 확인
+    const isEixstUser = await this.findOneByEmail({ email });
+    if (isEixstUser) return isEixstUser;
+    // 룰확인
     const userRole = await this.rolesService.findOneByName({ name: 'USER' });
-
+    if (!userRole)
+      throw new UnprocessableEntityException(
+        '기본 권한(USER)가 존재하지 않습니다.',
+      );
+    // 유저 생성
     const newUser = this.usersRepository.create({
       email,
-      role: userRole!,
+      role: userRole,
     });
 
     return await this.usersRepository.save(newUser);

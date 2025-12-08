@@ -16,8 +16,14 @@ export interface IAuthServiceSetRefreshToken {
   context: IContext;
 }
 
+export interface IAuthServiceGetRefreshToken {
+  user: User;
+}
+
 export interface IAuthServiceRestoreAccessToken {
-  user: IAuthUser['user'];
+  user: User;
+  refreshToken: string;
+  context: IContext;
 }
 
 export interface IAuthServiceLogout {
@@ -28,7 +34,28 @@ export interface IOAuthUser {
   user: Omit<User, 'id'>;
 }
 
-export interface IAuthServiceLoginOAuth {
+export interface IAuthServiceLoginOAuthWeb {
   req: Request & IOAuthUser;
   res: Response;
+}
+
+export interface IAuthServiceLoginOAuthApp {
+  token: string;
+  device: string;
+  issuedIp: string;
+}
+
+export interface IAuthServiceGetRefreshToken {
+  user: User;
+}
+
+export interface IAuthServiceRestoreTokenWeb {
+  user: User;
+  context: IContext;
+}
+
+export interface IAuthServiceRestoreTokenApp {
+  refreshToken: string; // 클라이언트가 보낸 토큰
+  device: string;
+  issuedIp: string;
 }

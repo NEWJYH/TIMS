@@ -1,26 +1,3 @@
-// import { PassportStrategy } from '@nestjs/passport';
-// import { ExtractJwt, Strategy } from 'passport-jwt';
-// import { IPayload } from './jwt-strategy';
-
-// export class JwtAccessStrategy extends PassportStrategy(Strategy, 'access') {
-//   constructor() {
-//     super({
-//       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-//       secretOrKey: process.env.JWT_ACCESS_TOKEN_SECRET as string,
-//     });
-//   }
-
-//   validate(payload: IPayload) {
-//     console.log('access payload test');
-//     console.log(payload);
-//     console.log('access payload test');
-
-//     return {
-//       id: payload.sub,
-//       role: payload.role,
-//     };
-//   }
-// }
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
