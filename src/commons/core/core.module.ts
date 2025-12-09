@@ -16,7 +16,9 @@ import { LoggingInterceptor } from '../interceptors/logging.interceptor';
 import { IgnoreMetricsClassSerializerInterceptor } from '../interceptors/ignore-metrics.interceptor';
 import { CustomHttpExceptionFilter } from '../filters/custom-exception.filter';
 import { MetricsController } from '../../metrics.controller';
-
+import { CacheModule } from '@nestjs/cache-manager';
+import { ValkeyCacheService } from './services/valkey-cache.service';
+import { redisStore } from 'cache-manager-redis-yet';
 @Global()
 @Module({
   imports: [
@@ -54,6 +56,19 @@ import { MetricsController } from '../../metrics.controller';
     PrometheusModule.register({
       path: '/metrics',
       defaultMetrics: { enabled: true },
+    }),
+
+    // 5. Cash-valkey
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => {
+        const store = await redisStore({
+          url: process.env.VALKEY_HOST,
+          ttl: 3000,
+        });
+
+        return { store };
+      },
     }),
   ],
   providers: [
@@ -100,9 +115,13 @@ import { MetricsController } from '../../metrics.controller';
       provide: APP_FILTER,
       useClass: CustomHttpExceptionFilter,
     },
+    ValkeyCacheService,
   ],
   controllers: [MetricsController],
-  exports: [PrometheusModule],
+  exports: [
+    PrometheusModule, //
+    ValkeyCacheService,
+  ],
 })
 export class CoreModule {}
 

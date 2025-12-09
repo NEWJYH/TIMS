@@ -14,7 +14,6 @@ export class AuthResolver {
     private readonly authService: AuthService, //
   ) {}
   //
-  // TODO : 쿠키 파서 적용
   // TODO : DTO, interface 분리
   // TODO : 모듈 전체 리펙토링
   // 구글 앱 로그인 (플러터-android, ios)

@@ -3,29 +3,41 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from 'src/apis/users/users.service';
 import { IPayload } from './jwt-strategy';
+import { Request } from 'express';
+import { ValkeyCacheService } from 'src/commons/core/services/valkey-cache.service';
 
 @Injectable()
 export class JwtAccessStrategy extends PassportStrategy(Strategy, 'access') {
   constructor(
     private readonly usersService: UsersService, //
+    private readonly valkeyCacheService: ValkeyCacheService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: process.env.JWT_ACCESS_TOKEN_SECRET as string,
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: IPayload) {
-    // console.log('payload sub: ', payload.sub);
+  async validate(req: Request, payload: IPayload) {
+    const accessToken = req.headers.authorization?.replace('Bearer ', '');
+    // 여기 들어와서 accessToken valkey가 검사안함
+    if (accessToken) {
+      const isBlacklisted = await this.valkeyCacheService.get(
+        `block:token:${accessToken}`,
+      );
+
+      if (isBlacklisted) {
+        throw new UnauthorizedException();
+      }
+    }
 
     const user = await this.usersService.findOne(payload.sub);
 
     if (!user) {
-      throw new UnauthorizedException('접근 권한이 없습니다.');
+      throw new UnauthorizedException();
     }
 
-    // console.log('DB User Role:', user.role);
-    // User Entity 자체를 리턴 (req.user가 됨)
     return user;
   }
 }

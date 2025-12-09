@@ -16,6 +16,7 @@
 /grafana_data
 /prometheus_data
 security.json
+/valkey_data
 
 # test data db
 *.sqlite

@@ -8,12 +8,11 @@ import {
 } from 'typeorm';
 
 @Entity('refresh_tokens')
-@Index(['tokenHash', 'isRevoked']) // 토큰 검색 및 상태 확인을 위한 인덱스 설정
+@Index(['tokenHash', 'isRevoked'])
 export class RefreshToken {
   @PrimaryGeneratedColumn('uuid')
   id: string; // 리프레시 토큰 레코드의 고유 ID
 
-  // 보안: 실제 토큰 문자열이 아닌 해시 값을 저장해야 합니다.
   @Column({ length: 512 })
   tokenHash: string;
 
