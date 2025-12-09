@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { CoreModule } from './commons/core/core.module'; // CoreModule 임포트
-
-// 비즈니스 모듈들
+import { CoreModule } from './commons/core/core.module';
+// 비즈니스 모듈
 import { UsersModule } from './apis/users/users.module';
 import { RolesModule } from './apis/roles/roles.module';
 import { StoresModule } from './apis/stores/stores.module';

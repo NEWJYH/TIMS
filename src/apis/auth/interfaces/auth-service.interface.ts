@@ -59,3 +59,9 @@ export interface IAuthServiceRestoreTokenApp {
   device: string;
   issuedIp: string;
 }
+
+export interface IJwtPayload {
+  sub: string;
+  exp: number;
+  iat: number;
+}

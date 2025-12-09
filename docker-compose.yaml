@@ -3,7 +3,7 @@ services:
   my-database:
     image: mariadb:10.11
     platform: linux/x86_64 # 배포환경에서는 주석처리
-    container_name: tire-app-mariadb  
+    container_name: tire-app-mariadb
     restart: always
     ports:
       - '3306:3306' # 로컬:컨테이너 포트 매핑
@@ -20,15 +20,18 @@ services:
       --collation-server=utf8mb4_unicode_ci
     volumes:
       - ./mysql_data:/var/lib/mysql # DB 데이터를 로컬 폴더에 저장 (삭제 방지)
-  # Redis : 변경 예정 valkey
-  my-redis:
-    image: redis:alpine
-    container_name: tire-app-redis
+  # valkey
+  my-valkey:
+    image: valkey/valkey:8
+    container_name: tire-app-valkey
+    env_file:
+      - .env
+    hostname: ${VALKEY_HOST_NAME}
     restart: always
     ports:
       - '6379:6379'
     volumes:
-      - ./redis_data:/data
+      - ./valkey_data:/data
   # S3 호환 스토리지
   my-seaweedfs:
     image: chrislusf/seaweedfs
@@ -114,7 +117,7 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     ports:
       - 9100:9100
-# glance
+  # glance
   glances:
     image: nicolargo/glances:latest-full
     container_name: glances
@@ -124,6 +127,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./glances.conf:/etc/glances/glances.conf
     environment:
-      - "GLANCES_OPT=-q --export prometheus --time 10 -C /etc/glances/glances.conf"
+      - 'GLANCES_OPT=-q --export prometheus --time 10 -C /etc/glances/glances.conf'
     ports:
       - '9091:9091'

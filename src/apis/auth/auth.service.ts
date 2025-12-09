@@ -7,6 +7,7 @@ import {
   IAuthServiceLogout,
   IAuthServiceRestoreAccessToken,
   IAuthServiceSetRefreshToken,
+  IJwtPayload,
 } from './interfaces/auth-service.interface';
 import {
   ConflictException,
@@ -21,6 +22,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RefreshToken } from './entities/refreshToken.entity';
 import { Repository } from 'typeorm';
+import { ValkeyCacheService } from 'src/commons/core/services/valkey-cache.service';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +33,7 @@ export class AuthService {
     private readonly refreshRepository: Repository<RefreshToken>,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly valkeyCacheService: ValkeyCacheService, //
   ) {
     this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID_APP);
   }
@@ -189,61 +192,64 @@ export class AuthService {
     const req = context.req;
     const res = context.res;
     const user = req.user;
-    // 1. 폐기할 토큰 찾기 (우선순위: 앱 인자 -> 웹 쿠키)
-    let tokenToDelete = refreshTokenForApp;
 
-    // 앱 토큰이 없으면 쿠키에서 찾아봄 (Web 환경)
-    const cookie = req.headers.cookie;
-    if (!cookie) throw new UnauthorizedException('cookie가 없습니다.');
-    const refreshToken = cookie
-      .split('; ')
-      .find((c) => c.startsWith('refreshToken='))
-      ?.split('=')[1];
-
-    if (!refreshToken)
+    const refreshToken =
+      refreshTokenForApp || (req.cookies['refreshToken'] as string | undefined);
+    if (!refreshToken) {
       throw new UnauthorizedException('Refresh Token이 없습니다.');
+    }
 
-    tokenToDelete = refreshToken;
-    console.log('확인', tokenToDelete);
+    try {
+      const accessToken = req.headers.authorization?.replace('Bearer ', '');
+      if (accessToken) {
+        // 토큰의 만료시간(exp)을 확인해서 남은 시간(TTL) 계산
+        const decoded: IJwtPayload = this.jwtService.decode(accessToken);
+        if (decoded && decoded['exp']) {
+          const ttl = decoded['exp'] - Math.floor(Date.now() / 1000);
 
-    // 2. 토큰이 존재하고 유저 정보가 있다면 DB에서 폐기 처리 (isRevoked = true)
-    if (tokenToDelete && user) {
+          if (ttl > 0) {
+            // 남은 시간만큼만 Valkey에 "차단" 등록
+            await this.valkeyCacheService.set<string>(
+              `block:token:${accessToken}`,
+              'logout',
+              ttl,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Access Token 블랙리스트 등록 실패 (로그아웃은 진행)', e);
+    }
+    if (user) {
       try {
-        // 해당 유저의 모든 토큰을 가져와서 매칭되는 것 찾기
-        const allUserTokens = await this.refreshRepository.find({
-          where: { userId: user.id },
+        const activeUserTokens = await this.refreshRepository.find({
+          where: { userId: user.id, isRevoked: false },
         });
 
         const matchedToken = await this.findMatchingToken(
-          tokenToDelete,
-          allUserTokens,
+          refreshToken,
+          activeUserTokens,
         );
 
         if (matchedToken) {
-          // 토큰 폐기
           await this.refreshRepository.update(
             { id: matchedToken.id },
             { isRevoked: true },
           );
         }
       } catch (e) {
-        console.error('로그아웃 중 DB 토큰 정리 실패:', e);
+        console.error('DB 토큰 폐기 실패:', e);
       }
     }
 
-    // 3. Web용 쿠키 삭제 (항상 실행)
     const isProduction = process.env.NODE_ENV === 'production';
-    try {
-      res.cookie('refreshToken', '', {
-        httpOnly: true,
-        secure: false, // TODO 변경해야함.
-        sameSite: isProduction ? 'none' : 'lax',
-        path: '/',
-        maxAge: 0, // 즉시 만료
-      });
-    } catch {
-      // res.cookie가 없는 환경일 수 있음
-    }
+    res.clearCookie('refreshToken', {
+      path: '/',
+      httpOnly: true,
+      secure: false, // TODO : 변경해야함 isProduction
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 0,
+    });
 
     return '로그아웃에 성공하였습니다.';
   }

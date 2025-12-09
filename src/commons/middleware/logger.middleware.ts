@@ -8,7 +8,7 @@ morgan.token('user', (req: Request & { user?: { id: string } }) => {
 });
 // Morgan 포맷 : IP, 유저, 시간, 메서드, URL, 상태코드, 응답크기 등 상세 정보 정의
 const morganFormat =
-  ':remote-addr - :user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"';
+  ':remote-addr - :user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] - :response-time ms ":referrer" ":user-agent"';
 
 export const morganLogging = morgan(morganFormat, {
   skip: (req: Request) => {

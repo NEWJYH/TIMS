@@ -9,17 +9,17 @@ import {
 import { GraphQLError } from 'graphql';
 import { AxiosError } from 'axios';
 import { GqlArgumentsHost } from '@nestjs/graphql';
-import { Request } from 'express';
 import { IContext } from '../interfaces/context';
+import { Request, Response } from 'express';
 
-// 1. 응답 객체의 구조를 정의 (HttpException response)
+// 응답 객체의 구조를 정의 (HttpException response)
 interface IErrorResponse {
   message?: string | string[];
   error?: string;
   statusCode?: number;
 }
 
-// 2. 알 수 없는 에러 객체가 status와 message를 가졌는지 확인하는 타입 가드
+// 알 수 없는 에러 객체가 status와 message를 가졌는지 확인하는 타입 가드
 interface IClientError {
   status: number;
   message: string;
@@ -51,13 +51,15 @@ export class CustomHttpExceptionFilter implements ExceptionFilter {
     let userLog = '';
     const contextType = host.getType();
 
+    // REST-API
     if (contextType === 'http') {
       const ctx = host.switchToHttp();
       const req = ctx.getRequest<Request>();
       // req.user가 존재하고 id가 있는지 안전하게 확인
       const user = req.user as Record<string, any> | undefined;
       if (user && user.id) userLog = `[User: ${String(user.id)}]`;
-    } else if ((contextType as string) === 'graphql') {
+    } // GRAPHQL-API
+    else if ((contextType as string) === 'graphql') {
       const gqlHost = GqlArgumentsHost.create(host);
       const ctx = gqlHost.getContext<IContext>();
       // ctx.req.user 타입 안전하게 접근
@@ -139,7 +141,21 @@ export class CustomHttpExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // GraphQL 포맷으로 던짐
+    if (host.getType() === 'http') {
+      const ctx = host.switchToHttp();
+      const response = ctx.getResponse<Response>();
+      const request = ctx.getRequest<Request>();
+
+      // REST-API
+      return response.status(status).json({
+        statusCode: status,
+        message: message,
+        error: code,
+        timestamp: new Date().toISOString(),
+        path: request.url,
+      });
+    }
+    // GraphQL
     throw new GraphQLError(message, {
       extensions: {
         code,
