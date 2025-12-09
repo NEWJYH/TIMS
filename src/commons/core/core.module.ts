@@ -1,4 +1,10 @@
-import { Module, Global, ValidationPipe } from '@nestjs/common';
+import {
+  Module,
+  Global,
+  ValidationPipe,
+  NestModule,
+  MiddlewareConsumer,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,7 +17,6 @@ import { APP_INTERCEPTOR, APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { gqlFormatError } from '../graphql/format-error';
 import { createGqlContext } from '../graphql/context';
-import { ApiMetricsInterceptor } from '../interceptors/api-metrics.interceptor';
 import { LoggingInterceptor } from '../interceptors/logging.interceptor';
 import { IgnoreMetricsClassSerializerInterceptor } from '../interceptors/ignore-metrics.interceptor';
 import { CustomHttpExceptionFilter } from '../filters/custom-exception.filter';
@@ -19,6 +24,8 @@ import { MetricsController } from '../../metrics.controller';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ValkeyCacheService } from './services/valkey-cache.service';
 import { redisStore } from 'cache-manager-redis-yet';
+import { GraphqlMetricsInterceptor } from '../interceptors/graphql-metrics.interceptor';
+import { MetricsMiddleware } from '../middleware/metrics.middleware';
 @Global()
 @Module({
   imports: [
@@ -72,19 +79,30 @@ import { redisStore } from 'cache-manager-redis-yet';
     }),
   ],
   providers: [
-    // --- 프로메테우스 카운터 ---
+    // HTTP 레벨 메트릭 (Middleware)
     makeCounterProvider({
-      name: 'api_requests_total',
-      help: 'Total number of API requests',
-      labelNames: ['type', 'action', 'status'],
+      name: 'http_requests_total',
+      help: 'Total number of HTTP requests',
+      labelNames: ['method', 'path', 'status'],
     }),
     makeHistogramProvider({
-      name: 'api_request_duration_seconds',
-      help: 'Duration of API requests in seconds',
-      labelNames: ['type', 'action', 'status'],
+      name: 'http_request_duration_seconds',
+      help: 'Duration of HTTP requests in seconds',
+      labelNames: ['method', 'path', 'status'],
       buckets: [0.1, 0.3, 0.5, 1, 1.5, 2, 3, 5, 10],
     }),
-
+    // GraphQL 비즈니스 로직 메트릭 (Interceptor)
+    makeCounterProvider({
+      name: 'graphql_operations_total',
+      help: 'Total number of GraphQL operations',
+      labelNames: ['status', 'operation'],
+    }),
+    makeHistogramProvider({
+      name: 'graphql_operation_duration_seconds',
+      help: 'Duration of GraphQL operations in seconds',
+      labelNames: ['status', 'operation'],
+      buckets: [0.1, 0.3, 0.5, 1, 1.5, 2, 3, 5, 10],
+    }),
     // --- 글로벌 인터셉터 ---
     // 1. 로깅
     {
@@ -94,7 +112,7 @@ import { redisStore } from 'cache-manager-redis-yet';
     // 2. 메트릭 측정
     {
       provide: APP_INTERCEPTOR,
-      useClass: ApiMetricsInterceptor,
+      useClass: GraphqlMetricsInterceptor,
     },
     // 3. 직렬화
     {
@@ -115,22 +133,21 @@ import { redisStore } from 'cache-manager-redis-yet';
       provide: APP_FILTER,
       useClass: CustomHttpExceptionFilter,
     },
+    //
     ValkeyCacheService,
   ],
-  controllers: [MetricsController],
+  controllers: [
+    MetricsController, //
+  ],
   exports: [
     PrometheusModule, //
     ValkeyCacheService,
   ],
 })
-export class CoreModule {}
-
-// NestJS Lifecycle
-// Middleware (Global -> Module) - 모건(Guest)
-// Graphql 엔진 - 스키마 검사                                                        // 실패 가정
-// Guards (Global -> Controller -> Route) - (AuthGuard - 여기서 req.user가 생김)     // 실행 x
-// Interceptors (Pre-Controller) - 요청 시간 측정 시작.                               // 실행 x
-// Pipes(Global -> Controller -> Route) (ValidationPipe - DTO 검사는 여기서 수행)     // 실행 x
-// Controller (Resolver) - 비즈니스 로직 실행 (Service 호출)                            // 실행 x
-// Interceptors (Post-Controller) - 응답 데이터 가공                                  // 실행 x
-// Exception Filters (ExceptionFilter - 에러가 여기로 떨어짐)                           // 실행 x
+export class CoreModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(MetricsMiddleware) // 미들웨어 적용
+      .forRoutes('*'); // 모든 경로
+  }
+}

@@ -49,7 +49,9 @@ export class CustomHttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     // 유저 정보 추출
     let userLog = '';
-    const contextType = host.getType();
+    const contextType = host.getType<string>();
+
+    console.log('test', contextType);
 
     // REST-API
     if (contextType === 'http') {
@@ -59,7 +61,7 @@ export class CustomHttpExceptionFilter implements ExceptionFilter {
       const user = req.user as Record<string, any> | undefined;
       if (user && user.id) userLog = `[User: ${String(user.id)}]`;
     } // GRAPHQL-API
-    else if ((contextType as string) === 'graphql') {
+    else if (contextType === 'graphql') {
       const gqlHost = GqlArgumentsHost.create(host);
       const ctx = gqlHost.getContext<IContext>();
       // ctx.req.user 타입 안전하게 접근
@@ -145,6 +147,11 @@ export class CustomHttpExceptionFilter implements ExceptionFilter {
       const ctx = host.switchToHttp();
       const response = ctx.getResponse<Response>();
       const request = ctx.getRequest<Request>();
+
+      // 이중 응답 방지
+      if (response.headersSent) {
+        return;
+      }
 
       // REST-API
       return response.status(status).json({

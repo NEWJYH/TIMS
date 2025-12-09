@@ -15,4 +15,4 @@ COPY . .
 
 # 5. 실행
 # RUN yarn seed
-CMD ["yarn", "start:dev"]
+CMD ["yarn", "start:prod"]
