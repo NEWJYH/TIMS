@@ -51,8 +51,6 @@ export class CustomHttpExceptionFilter implements ExceptionFilter {
     let userLog = '';
     const contextType = host.getType<string>();
 
-    console.log('test', contextType);
-
     // REST-API
     if (contextType === 'http') {
       const ctx = host.switchToHttp();
@@ -80,7 +78,6 @@ export class CustomHttpExceptionFilter implements ExceptionFilter {
 
       // 응답이 객체인지 문자열인지 확인하여 처리
       if (typeof response === 'object' && response !== null) {
-        // IErrorResponse 인터페이스로 단언하여 접근
         const errorObj = response as IErrorResponse;
         if (Array.isArray(errorObj.message)) {
           message = errorObj.message.join(', ');
@@ -153,13 +150,17 @@ export class CustomHttpExceptionFilter implements ExceptionFilter {
         return;
       }
 
+      if (status === 404) {
+        return response.sendStatus(404);
+      }
+
       // REST-API
       return response.status(status).json({
         statusCode: status,
         message: message,
         error: code,
         timestamp: new Date().toISOString(),
-        path: request.url,
+        path: request.path,
       });
     }
     // GraphQL
