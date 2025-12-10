@@ -10,8 +10,7 @@
 /src/commons/database/seeds
 
 # Docker Data
-/mysql_data
-/redis_data
+/mariadb_data
 /seaweed_data
 /grafana_data
 /prometheus_data
