@@ -23,6 +23,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { RefreshToken } from './entities/refreshToken.entity';
 import { Repository } from 'typeorm';
 import { ValkeyCacheService } from 'src/commons/core/services/valkey-cache.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -53,24 +54,28 @@ export class AuthService {
     device: string;
     issuedIp: string;
   }): Promise<void> {
-    const salt = await bcrypt.genSalt(Number(process.env.JWT_SALT));
-    const tokenHash = await bcrypt.hash(refreshToken, salt);
+    const tokenHash = crypto
+      .createHmac('sha256', process.env.REFRESH_TOKEN_SALT as string)
+      .update(refreshToken)
+      .digest('hex');
+
     const payload: { exp: number } = this.jwtService.decode(refreshToken);
     if (!payload || !payload.exp) {
       throw new ConflictException('토큰 페이로드를 읽을 수 없습니다.');
     }
     const expiresAt = new Date(payload.exp * 1000);
-
-    const result = await this.refreshRepository.save({
+    const tokenEntity = this.refreshRepository.create({
       tokenHash: tokenHash,
-      expiresAt: expiresAt,
-      device,
       userId,
-      isRevoked: false,
+      device,
       issuedIp,
+      isRevoked: false,
+      expiresAt,
     });
 
-    if (!result)
+    const savedEntity = await this.refreshRepository.save(tokenEntity);
+
+    if (!savedEntity)
       throw new ConflictException('리프레시 토큰 저장에 실패했습니다.');
     // 토큰 정리 로직 (5개 이상일 경우 오래된 순 삭제)
     await this.cleanupOldTokens(userId);
@@ -226,7 +231,7 @@ export class AuthService {
           where: { userId: user.id, isRevoked: false },
         });
 
-        const matchedToken = await this.findMatchingToken(
+        const matchedToken = this.findMatchingToken(
           refreshToken,
           activeUserTokens,
         );
@@ -242,19 +247,18 @@ export class AuthService {
       }
     }
 
-    const isProduction = process.env.NODE_ENV === 'production';
+    // const isProduction = process.env.NODE_ENV === 'production';
     res.clearCookie('refreshToken', {
       path: '/',
       httpOnly: true,
-      secure: false, // TODO : 변경해야함 isProduction
-      sameSite: isProduction ? 'none' : 'lax',
+      secure: true, // TODO : 변경해야함 isProduction
+      sameSite: 'none', //isProduction ? 'none' : 'lax',
       maxAge: 0,
     });
 
     return '로그아웃에 성공하였습니다.';
   }
 
-  // web - rotate refresh
   async restoreAccessToken({
     user,
     refreshToken,
@@ -266,25 +270,29 @@ export class AuthService {
       where: { userId: user.id },
     });
 
-    const matchedToken = await this.findMatchingToken(
-      refreshToken,
-      allUserTokens,
-    );
+    const matchedToken = this.findMatchingToken(refreshToken, allUserTokens);
 
     // 만약 DB에서 찾을 수 없거나 이미 취소된(Revoked) 토큰이라면 의심스러운 접근
     if (!matchedToken) {
       throw new UnauthorizedException('존재하지 않는 토큰입니다.');
     }
     if (matchedToken.isRevoked) {
-      throw new UnauthorizedException(
-        '이미 폐기된 토큰입니다. 다시 로그인해주세요.',
-      );
-    }
+      const GRACE_PERIOD_MS = 10000;
 
+      if (matchedToken.revokedAt) {
+        const timeSinceRevocation =
+          Date.now() - matchedToken.revokedAt.getTime();
+        if (timeSinceRevocation > GRACE_PERIOD_MS) {
+          throw new UnauthorizedException(
+            '이미 폐기된 토큰입니다. 다시 로그인해주세요.',
+          );
+        }
+      }
+    }
     // 2. 기존 리프레시 토큰 폐기 (isRevoked = true)
     await this.refreshRepository.update(
       { id: matchedToken.id },
-      { isRevoked: true },
+      { isRevoked: true, revokedAt: new Date() },
     );
 
     // 3. 리프레시 토큰 재발급 로직 실행 (Rotation)
@@ -300,7 +308,7 @@ export class AuthService {
     let payload: { sub: string };
     try {
       payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_TOKEN_SECRET as string,
+        secret: process.env.JWT_REFRESH_TOKEN_SECRET!,
       });
     } catch {
       // 만료되었거나 시그니처가 안 맞으면 에러
@@ -320,10 +328,7 @@ export class AuthService {
       where: { userId: user.id },
     });
 
-    const matchedToken = await this.findMatchingToken(
-      refreshToken,
-      allUserTokens,
-    );
+    const matchedToken = this.findMatchingToken(refreshToken, allUserTokens);
 
     // DB에 없거나, 이미 취소된 토큰이면 차단
     if (!matchedToken) {
@@ -358,24 +363,28 @@ export class AuthService {
     });
 
     // 3. HTTP Only 쿠키 설정
-    const isProduction = process.env.NODE_ENV === 'production';
+    // const isProduction = process.env.NODE_ENV === 'production';
     const expiresInMs = this.getExpiresInMs();
 
     context.res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: false, //TODO : isProduction
-      sameSite: isProduction ? 'none' : 'lax',
+      secure: true, //TODO : isProduction
+      sameSite: 'none', //isProduction ? 'none' : 'lax',
       path: '/',
       maxAge: expiresInMs,
     });
   }
 
-  private async findMatchingToken(
+  private findMatchingToken(
     rawToken: string,
     tokens: RefreshToken[],
-  ): Promise<RefreshToken | undefined> {
+  ): RefreshToken | undefined {
+    const inputHash = crypto
+      .createHmac('sha256', process.env.REFRESH_TOKEN_SALT!)
+      .update(rawToken)
+      .digest('hex');
     for (const token of tokens) {
-      const isMatch = await bcrypt.compare(rawToken, token.tokenHash);
+      const isMatch = token.tokenHash === inputHash;
       if (isMatch) return token;
     }
     return undefined;

@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Not, Repository } from 'typeorm';
 import { Tire } from './entities/tire.entity';
 import { TireBrandsService } from '../tireBrands/tireBrands.service';
-import { TireCategoriesService } from '../tireCatetories/tireCategories.service';
+import { TireCategoriesService } from '../tireCategories/tireCategories.service';
 import {
   ITiresServiceCreate,
   ITiresServiceUpdate,

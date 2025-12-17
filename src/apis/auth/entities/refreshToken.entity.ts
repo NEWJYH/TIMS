@@ -25,6 +25,9 @@ export class RefreshToken {
   @Column({ default: false })
   isRevoked: boolean; // 토큰 무효화 여부 (수동 로그아웃, 보안 침해 등으로 회수 시 true)
 
+  @Column({ type: 'timestamp', nullable: true })
+  revokedAt: Date | null;
+
   @Column({ nullable: true })
   issuedIp: string; // 토큰 발급 IP (추가 보안 정보)
 

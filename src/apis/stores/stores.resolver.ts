@@ -40,6 +40,17 @@ export class StoresResolver {
     return this.storesService.findMyStore(currentUser, storeId);
   }
 
+  // 검색 : 작성일 2025.12.13 17:14
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
+  @UseGuards(GqlAuthGuard('access'), RolesGuard)
+  @Query(() => [Store], { nullable: true })
+  fetchStoreByKeyWord(
+    @CurrentUser() currentUser: User, //
+    @Args('keyword', { type: () => String }) keyword: string,
+  ) {
+    return this.storesService.findByKeyWord(keyword);
+  }
+
   // =================================================================
   // [Mutation] 생성/수정/삭제 영역
   // =================================================================
