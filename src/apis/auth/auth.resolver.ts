@@ -36,7 +36,7 @@ export class AuthResolver {
   // web rotate refreshToken
   @UseGuards(GqlAuthGuard('refresh'))
   @Mutation(() => String)
-  restoreAcessToken(
+  restoreAccessToken(
     @Context() context: IContext, //
   ) {
     const cookie = context.req.headers.cookie;

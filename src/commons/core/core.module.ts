@@ -45,8 +45,8 @@ import { MetricsMiddleware } from '../middleware/metrics.middleware';
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_DATABASE,
       entities: [__dirname + '/../../apis/**/*.entity.*'],
-      synchronize: process.env.NODE_ENV !== 'production',
-      logging: process.env.NODE_ENV !== 'production',
+      synchronize: false, //process.env.NODE_ENV !== 'production',
+      logging: false, // process.env.NODE_ENV !== 'production',
     }),
 
     // 3. GraphQL

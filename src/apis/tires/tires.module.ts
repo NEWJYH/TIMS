@@ -4,7 +4,7 @@ import { Tire } from './entities/tire.entity';
 import { TiresResolver } from './tires.resolver';
 import { TiresService } from './tires.service';
 import { TireBrandsModule } from '../tireBrands/tireBrands.module';
-import { TireCategoriesModule } from '../tireCatetories/tireCategories.module';
+import { TireCategoriesModule } from '../tireCategories/tireCategories.module';
 
 @Module({
   imports: [

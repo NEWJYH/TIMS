@@ -1,7 +1,7 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { Inventory } from 'src/apis/inventories/entities/inventory.entity';
 import { TireBrand } from 'src/apis/tireBrands/entities/tireBrand.entity';
-import { TireCategory } from 'src/apis/tireCatetories/entities/tireCategory.entity';
+import { TireCategory } from 'src/apis/tireCategories/entities/tireCategory.entity';
 import {
   Column,
   CreateDateColumn,

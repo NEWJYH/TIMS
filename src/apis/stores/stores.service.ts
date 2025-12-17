@@ -16,6 +16,7 @@ import {
 } from './interfaces/stores-service.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../users/entities/user.entity';
+import { ILike } from 'typeorm';
 
 @Injectable()
 export class StoresService {
@@ -31,6 +32,18 @@ export class StoresService {
   async findOne(id: number): Promise<Store | null> {
     return await this.storeRepository.findOne({ where: { id } });
   }
+
+  async findByKeyWord(keyword: string): Promise<Store[] | null> {
+    return this.storeRepository.find({
+      where: [
+        { name: ILike(`%${keyword}%`) }, //
+        { address: ILike(`%${keyword}%`) }, //
+        { telePhoneNumber: ILike(`%${keyword}%`) }, //
+      ],
+      take: 10,
+    });
+  }
+
   async findAll(user: User): Promise<Store[]> {
     const options: FindManyOptions<Store> = {
       order: { createdAt: 'DESC' },

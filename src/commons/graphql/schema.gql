@@ -153,6 +153,7 @@ type Query {
   fetchRole(name: String!): Role
   fetchStores: [Store!]!
   fetchStore(storeId: Int): Store
+  fetchStoreByKeyWord(keyword: String!): [Store!]
   fetchMyFiles(fetchFilesInput: FetchFileInput!): [File!]!
   fetchInventories(storeId: Int): [Inventory!]!
   fetchInventory(tireId: Int!, storeId: Int): Inventory
@@ -183,7 +184,7 @@ input FetchInventoryHistoryInput {
 type Mutation {
   loginGoogleApp(googleLoginInput: GoogleLoginInput!): LoginResponse!
   login(email: String!, password: String!): String!
-  restoreAcessToken: String!
+  restoreAccessToken: String!
   restoreAccessTokenApp(refreshToken: String!): RestoreAccessTokenAppResponse!
   logout(refreshToken: String): String!
   deleteUser(userId: String!): Boolean!
