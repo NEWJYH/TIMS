@@ -55,7 +55,7 @@ export class AuthService {
     issuedIp: string;
   }): Promise<void> {
     const tokenHash = crypto
-      .createHmac('sha256', process.env.REFRESH_TOKEN_SALT as string)
+      .createHmac('sha256', process.env.REFRESH_TOKEN_SALT!)
       .update(refreshToken)
       .digest('hex');
 
@@ -64,6 +64,7 @@ export class AuthService {
       throw new ConflictException('토큰 페이로드를 읽을 수 없습니다.');
     }
     const expiresAt = new Date(payload.exp * 1000);
+
     const tokenEntity = this.refreshRepository.create({
       tokenHash: tokenHash,
       userId,
@@ -251,8 +252,8 @@ export class AuthService {
     res.clearCookie('refreshToken', {
       path: '/',
       httpOnly: true,
-      secure: true, // TODO : 변경해야함 isProduction
-      sameSite: 'none', //isProduction ? 'none' : 'lax',
+      secure: false, // TODO : 변경해야함 isProduction
+      sameSite: 'lax', //isProduction ? 'none' : 'lax',
       maxAge: 0,
     });
 
@@ -368,8 +369,8 @@ export class AuthService {
 
     context.res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: true, //TODO : isProduction
-      sameSite: 'none', //isProduction ? 'none' : 'lax',
+      secure: false, //TODO : isProduction
+      sameSite: 'lax', //isProduction ? 'none' : 'lax',
       path: '/',
       maxAge: expiresInMs,
     });

@@ -20,8 +20,8 @@ export class RoleRequestsResolver {
   // [Query] 조회 영역
   // =================================================================
 
-  // STAFF, ADMIN
-  @Roles(RoleName.STAFF, RoleName.ADMIN)
+  // USER, STAFF, ADMIN
+  @Roles(RoleName.USER, RoleName.STAFF, RoleName.ADMIN)
   @UseGuards(GqlAuthGuard('access'), RolesGuard)
   @Query(() => [RoleRequest])
   fetchRoleRequests(

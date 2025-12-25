@@ -96,6 +96,8 @@ export class RoleRequestsService {
       }
       // 내 매장 ID로 필터링 강제 적용
       where.storeId = user.storeId;
+    } else if (user.role.name === 'USER') {
+      where.userId = user.id;
     }
 
     return await this.roleRequestRepository.find({

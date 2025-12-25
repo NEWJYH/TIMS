@@ -6,15 +6,15 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { morganLogging } from './commons/middleware/logger.middleware';
 import { winstonLogger } from './commons/logger/winston.config';
 import * as cookieParser from 'cookie-parser';
-import * as fs from 'fs';
+// import * as fs from 'fs';
 
 async function bootstrap() {
-  const httpsOptions = {
-    key: fs.readFileSync(process.env.HTTPS_KEY_PATH!),
-    cert: fs.readFileSync(process.env.HTTPS_CERT_PATH!),
-  };
+  // const httpsOptions = {
+  //   key: fs.readFileSync(process.env.HTTPS_KEY_PATH!),
+  //   cert: fs.readFileSync(process.env.HTTPS_CERT_PATH!),
+  // };
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    httpsOptions,
+    // httpsOptions,
     logger: winstonLogger,
   });
 
@@ -33,6 +33,8 @@ async function bootstrap() {
     origin: [
       process.env.ALLOW_DOMAIN_1!, //
       process.env.ALLOW_DOMAIN_2!, //
+      process.env.ALLOW_DOMAIN_3!,
+      process.env.ALLOW_DOMAIN_4!,
     ],
     credentials: true,
   });

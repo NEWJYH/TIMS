@@ -47,6 +47,7 @@ import { MetricsMiddleware } from '../middleware/metrics.middleware';
       entities: [__dirname + '/../../apis/**/*.entity.*'],
       synchronize: false, //process.env.NODE_ENV !== 'production',
       logging: false, // process.env.NODE_ENV !== 'production',
+      timezone: 'Z',
     }),
 
     // 3. GraphQL

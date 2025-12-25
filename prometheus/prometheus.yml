@@ -4,6 +4,9 @@ global:
 scrape_configs:
   - job_name: 'nestjs-backend'
     metrics_path: '/metrics'
+    # scheme: https
+    # tls_config:
+    #   insecure_skip_verify: true # [중요] 사설 인증서 검증 무시
     static_configs:
       - targets: ['host.docker.internal:3000']
       # - targets: ['my-backend:3000'] # 도커환경으로 킬때 변경할것(서버에서)
